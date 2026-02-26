@@ -1,0 +1,91 @@
+6.1
+-expression with multiple assignment will benifit from parenthesis.
+-operands, function arguments and subexpressions can be evaluated in any order
+  eg:
+    func(func1(), func2(), func3());
+      when this function is called, it can evaluated it's arguments in any order. It might be specially unexprect if func1(), func2() or func3() does some i/o task and you expected say func2() and func3() which gets a unser's input and retuns to be the 2nd and 3rd argument of the function, however if func3() gets evaluated first then user's first input will be your third argument
+      OR:
+      x + ++x
+      something like this can cause proble too cuz c++ can evaluate any of this first
+
+6.3:
+-std::numeric_limits<std::int64_t>::max()
+
+6.4
+-due to unspecified oder of evaluation for func arguments an operation like this can cause prob
+    add(x, ++x);
+    cuz the compiler can evaluate any of them first.
+
+NOTE: Don’t use a variable that has a side effect applied to it more than once in a given statement. If you do, the result may be undefined.
+6.5
+-comma operator has precedence less than =
+-z=(a,b); -> evaluates both a and b but returns b
+-z=a,b -> z=a happens first, and be gets evaluated
+-Different from comma seperator used to give multiple args to a function
+
+6.6
+-the condition ternary operator: ?: has very low precedence so something like this:
+    std::cout << (x<y)?"good":"bad";
+    might give unexpected resut
+-condn evaluates as a part of the expression i.e 
+    constexpr hello {isBig?100:200}; -> very hard to replace this in if-else unless you make a function with the if else inside and return the value
+-the type for the results must match or be convertable:
+    like int and double/float (will transform to float)
+    int and uint (transform to uint) -> WARNING!!
+    or you can have both second and third operand (of the ?: operator) i.e the results to be throw
+NOTE:
+    if x is const expr, `if` statements using only x as variable should be of type constexpr too (covered later ig)
+ONE OF THE BEST PLACES TO USE ?: is when initializing constexpr with one of two values BUT all the operands in constexpr should be a constant too
+
+6.7
+NOTE: For floating point comparision, since floating point storage can be imprecise, doing:
+    float a = 1.4f;
+    float b = 0.3f + 1.1f;
+    bool val = a == b;
+    the bool val will prob not be true. So better is to create a custom function that checks for equal stuffs:
+
+    Something like this:
+    #include <algorithm> ->for std::max
+    #invlude <cmath> -> for std::abs
+    bool approximatelyEqualRel(double a, double b, double relEpsilon)
+    {
+      return (std::abs(a - b) <= (std::max(std::abs(a), std::abs(b)) * relEpsilon)); -> calculates the positive value for difference between a and b and as long as it's less than 
+                          relEpsilon% or less than the max of a or b, it's equal. So if a and b are 1 and 1.000001 and relEpsilon is 0.1% i.e 0.001, then 1-1.000001 = 0.000001 which
+                          is less than 1.000001*0.001, therefore they are considered equal
+    }
+
+
+    just negate this to get != equivalent
+
+    == is only acceptable for comparision between floating point literals like 1.1 == 1.1, which seems quite useless
+    or
+    float a = 1.1f;
+    float b = 1.1f;
+    a == b; might work
+    however even the above function breaks at numbers close to zero cuz:
+      for comparision between a =  0 and b = 0.0000000001, we might demand rel difference required to be only 1%, but 1% of 0.000000001 will be < b-0, however, the answer would have
+      been different if it was between a = 1 and b = 1.00000001 with rel episelon of 1%. So better if we use mix of absolute and relative episolen with a function like
+
+    bool approxAbsRel(double a, double b, double relEpsilon, double absEpsilon){
+      bool truth = std::abs(a - b) < absEpsilon;
+      if (truth) return True;
+      return approximatEqualRel(a, b, relEpsilon);
+    }
+
+    NOTE: the above 2 functions can be made constexpr in c++23 but before this std::abs() was not made a constexpr function so will show error
+
+    A workaround is a custom constexpr function that does abs stuff.
+    templete <typename T>
+    constexpr constAbs T (T x){
+        return x < 0? -x : x;
+      }
+
+6.8:
+logical xor -> does not exist. But can be use for bools like:
+  if (a!= b != c !=d)
+  for things other than bool, if u need xor use:
+  if(!!a!=!!b!=!!c)
+  xor for more than 1 operand means there must be odd number of true for it to be true, otherwise it's false ...
+
+NOTE: alternatively u can use and for &&, or for || and not for ! in C++
+

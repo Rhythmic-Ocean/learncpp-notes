@@ -1,0 +1,61 @@
+2.2: returns
+-Can't call main() explictly in C++, but it's allowed in C
+-In C++ main() should have int as return type
+-Global variables are initialized prior to the execution of main. If the initializer for such a variable invokes a function, then that function will execute prior to main. 
+-C++ standard has 3 status code (one that main() returns) : 0, EXIT_SUCCESS and EXIT_FAILURE. 0, EXIT_SUCCESS usually meaning execution was success.
+-For max portability, use just these as return value of ur main()
+-if a value returning function does not return a value, it results in undefined behaviour, except for main() which will just return 0 implicitly
+2.3: void
+-no return statement is required for void functin type, although just doing return with nothing follwing it is ok
+- std::cout requires a value after << otherwise it will cause compile timer error
+2.4: prameters types
+-functions can have unnamed parameters like:
+    int hello(int){
+
+      }
+    usually done if it's a revamped function which used to take args but now it's unneeded, so we do this so legacy calls work too
+    better would be:
+    int hello(int /*count*/){
+
+      }
+    where count is replaced with whatever there was before there's nothing now
+2.5 local variables:
+-the last one that was created is destroyed first (like in a stack)
+-If the object is a class type object, prior to destruction, a special function called a destructor is invoked. In many cases, the destructor does nothing, in which case no cost is incurred.
+-variable lifetime is a runtime property and scope is a compile time property
+-define local variables as close to it's first use as possible
+Temporary Object : They are objects with no names/ identifier (so not a variable) that is created and destroyed immediately after the statement it is in ends
+                    eg: std::cout << getValueFromUser() << '\n';
+                    here return value from the func is stored in temp obj and destroyed immediately after
+                    although modern compilers (c++17) skips the step and would directly give the return value to output console
+                    like here: int a {getVal()};
+                    older compilers would prob do creating temp var stuff here too but modern compilers directly do assignments to save resources
+ODR : A function can only have one definition withing a program but function overloading is possible 
+NOTE: If decleartion if proper but declaration is imporper/missing, then the error reported is from the linker, else it's from the compiler
+2.9 Naming collision and namespaces:
+-it's compiler error if 2 functions are named the same (with same parameters and stuff) within the same file
+-it's linker error if 2 functions are named the same within the same program but different files, they will compile ok as that happens to each file independently
+-std is a namespace, we use std::cout instead of just cout to avoid name confilicts with other functions named cout
+-we can use 'using namespace std' at the top of our c++ file and just use cout instead of std::cout but it's not recommended unless u r really sure
+-namespaces, we can only have declaration or definations, no statements. So:
+    int x; is legal
+    int x = 10; is leagal
+    x=10; is illegal
+NOTE: Everything not inside a function class or a namespace is in global namespace, so u can't have normal statements in global namespaces.
+      Thus the only place to write expression statements and statements is inside definitions, like function definitino, variable definition and such 
+      It is strongly discouranged to have non declarations and definations in global namesapces
+
+2.10 preprocessors
+-The entire process of preprocessing compiling and linking is called translation
+-preprocessor deractives are the stuffs that start with #
+-macro functins are unsafe and generally not recommended
+
+2.11 header files:
+-generally not advised 
+-generally, don't do definations for the files you are gonna #include, just write declarations on them. Otherwise having double definations of same name function is gonna 
+  violate ODR rule and cause compiler error
+-for similar reasons don't do #include for .cpp file, do so for just the .h files
+
+2.12 header guards
+-while may seem unnecessary as we don't usually do definitions in header file, it is important cuz type definations ARE done there
+-#pragma one is an alternative, but there are some failure case in it and not every compiler might support it

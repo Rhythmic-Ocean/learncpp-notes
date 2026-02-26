@@ -1,0 +1,114 @@
+5.1
+-a const must be initilized upon declaration, and cannot be reassigned.
+-you can initialize a const with a non const variable, it works:
+      int a {2};
+      const ab = a;
+-we don't need explicit intializer for const when passing to function eg:
+    int hello(const int bye);
+
+    int main(){
+        int a = hello(3);
+      }
+
+    the argument '3' will be used as the const initializer
+  NOTE: Putting const as parameter is NOT recommended
+- NOTE: Having a const return type is also discouraged as it comes in way of compiler optimization
+-when possible and suitable have vars be constant as it helps compiler with optimations
+-NOTE: Prefer constant variables over object as preprocessors can't be seen by the compiler so migth be hard to debug
+-preprocessors are just substituted so their scope is global, need to be careful abt tht
+-C++ has 2 types of type qualifier : const and volatile: fm
+    use volatile if you have a variable that does not depend on the program but on something external, not known by the compiler. Will prevent compiler from optimizing and prevent 
+    errors
+5.2
+-string literals are const objects that are gurentted to exist till the end of program so:
+  std::cout <<"Hello";
+  here "Hello" is not a const string that exists always, we use std::string and std::string_view to create temporary literals
+-important to have a f: float b {4.1f}; when initializing floats, cuz just 4.1 will make double which will be converted into float which might cause some precision problem
+-constexpr is evaluated at compiler time always,so u can't give it a variable during intialization, but for const it is case by case, will be compile time if it allows
+-In C++ standard, constant expressions are those which can be evaluated at compile time or the translation phase (preprocessing, compiling and linking i.e everything before the run)
+    they contain constexpr variables and constexpr functions
+-std::cout is not a constant expression
+-only integral types of const are considered constant expressions, for othertypes we need constexpr
+-The technical name for an expression that must be evaluated at compile-time is a manifestly constant-evaluated expression.
+-function should be defined as contexpr or consteval like:
+    constexpr  int hello(int a);
+    or
+    consteval int hello (int a)
+    and must follow some strict criteria to be evluated as const expressions
+-const int is considered constant expression cuz we need array length to be known at compile time and ppl wanted to have const int represent array length number, so it became this
+-function parameters cannot be constexpr
+-const function parameters are just treated as runtime constants
+-constexpr function are capable of being evaluated at compile time, but if assigned to constant stuff only like:
+    constexpr int func(int a);
+    int a  {func(20)}; -> maybe compile time
+    const int a  {func(20)} -> maybe compile time (more likelly)
+    constexpr int a  {func(20)} -> definitly compile time
+-std::string to get string type
+
+5.7
+-getline() can be used to read a line, until \n
+    requires 2 argument, usually : std::getline(std::cin>>std::ws, variable); -> the stuff u get will be stored in variable
+    >> usually ignores leading whitespace when extracting stuff, but std::getline() does not so we need std::cin >> std::ws as arg
+-length of a string : name.length()
+NOTE: class methods are called member function, length() is a member function -> std::string::length()
+-there's difference between C type string literals and std::string literals:
+    c type literals : std::string hello = "Hello";
+    std::string literals : std::string hello = "Hello\n"s;
+    for that s, we need it from std::string::string_literals 
+    we can do:
+    #include <string>
+    using string_literals
+
+constexpr std::string will generate error, for constant expression string we use std::string_view
+
+5.8
+-std::string_view can be assigned both C type literals and std::string literals
+-std::string_view is like char* a in C, just a pointer for first character, it doesn't have individual access to the string but it can "view" it.
+-std::string_view will not implicitly convert to std::string i.e you cannot have std::string_view in places where std::string is expected. Eg:
+      int func(std::string x);
+      int main(){
+          std::string_view a {"hello"};
+          int b = func(a); -> ERROR
+        }
+
+      BUT Explicit casting works:
+      std::string_view a {"Hello"};
+      std::string b {a}; -> It would be implicit if we have assignment with = instead of {}, but this is explicit casting
+      OR
+      casting with static_cast<> works too:
+      std::string c {static_cast<std::string>a};
+-string_view literls type with sv, it's in std::string::string_view_literal
+-string_view literals accept constexpr
+
+5.9
+-if a string std::string_view is looking at is destroyed then it's becomes a dangling viewer
+INVALID USE OF STD::STRING_VIEW:
+    #include <iostream>
+    #include <string>
+    #include <string_view>
+
+    std::string getName()
+    {
+        std::string s { "Alex" };
+        return s;
+    }
+
+    int main()
+    {
+      std::string_view name { getName() }; // name initialized with return value of function
+      std::cout << name << '\n'; // undefined behavior
+
+      return 0;
+    }
+
+UNDEFINED:
+
+ std::string_view name { "Alex"s }; 
+
+ string_literal is created as Alex, but it's immediatly destroyed as it's not assigned to any std::string literal, and string_view can just view in memory, not copy the value
+UNDEFINED:
+    std::string s { "Hello, world!" };
+    std::string_view sv { s }; // sv is now viewing s
+
+    s = "Hello, a!";    // modifies s, which invalidates sv (s is still valid)
+    std::cout << sv << '\n';   // undefined behavior

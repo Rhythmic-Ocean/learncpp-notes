@@ -1,0 +1,84 @@
+f.2
+-constexpr fncs are NOT required to be compile time ready, but variables are. That's why consteval (C++20) fncs are the one required to be compiled at compile time
+-prior to C++20 the only way is to have the variable that the function returns to be of constexpr type, even for the ones that return void
+
+NOTE: prior to c++23 u needed at least one argument set fro ur fnc where it could be evaluated at compile time, but it's not longer required
+    eg:
+      
+    int getValue(int x)
+    {
+        return x;
+    }
+
+    // This function can be evaluated at runtime
+    // When evaluated at compile-time, the function will produce a compilation error
+    // because the call to getValue(x) cannot be resolved at compile-time
+    constexpr int foo(int x)
+    {
+        if (x < 0) return 0; // needed prior to adoption of P2448R1 in C++23 (see note below)
+        return getValue(x);  // call to non-constexpr function here
+    }
+
+    the constexpr function would be ok with if(x< 0)... part in c++23, but before it would have warned/ thrown an error
+
+NOTE: constexpr functions can be evaluated at compile time but will try runtime eval based on context. However consteval must be evauated at compile time, so it's args must be 
+  constexpr too!
+    consteval foo(int a){
+        return a;
+      }
+    int b = 5;
+    foo(b); -> FAILS cuz called with non constexpr stuff
+    foo(5); -> passes
+
+NOTE: constexpr and consteval functions are inline implicitly. So best practice is to include them in header files
+NOTE: 
+  Per CWG2166, the actual requirement for the forward declaration of constexpr functions that are evaluated at compile-time is that “the constexpr function must be defined prior this the outermost evaluation that eventually results in the invocation”. Therefore, this is allowed:
+
+  #include <iostream>
+
+  constexpr int foo(int);
+
+  constexpr int goo(int c)
+  {
+    return foo(c);   // note that foo is not defined yet
+  }
+
+  constexpr int foo(int b) // okay because foo is still defined before any calls to goo
+  {
+    return b;
+  }
+
+  int main()
+  {
+    constexpr int a{ goo(5) }; // this is the outermost invocation
+
+    return 0;
+  }
+
+  The intent here is to allow for mutually recursive constexpr functions (where two constexpr functions call each other), which would not be possible otherwise.
+NOTE: To check if the compiler has been forced to evaluate a function at compile time do:
+  #include <type_traits>
+
+  constexpr int this_fnc(int){
+      if(std::is_constant_evaluated()){ -> use if consteval() in C++ 23
+        doSomething();
+        std::cout << 1;
+        }
+    }
+    THERE is no mechanism in C++ as of yet that determines if a function will be evaluated at compile time. The above stuff only says if compiler has been forced to in the given program. In cases where it's left for comiler to decided, there's not a definite boundry
+    One way to gurentee constexpr function evaluation at compile time:
+    consteval auto CONSTEVAL(auto value){
+        return value
+    }
+    constexpr bool min (int x, int y){
+        return x < y;
+    }
+    int main(){
+      int x {5};
+      int y {6};
+      std::cout << std::boolalpha << CONSTEVAL(min(x, y));
+    }
+
+F.4
+-constexpr and consteval's local vars are not required to be constexpr for them to be evaluated at compile time
+NOTE: Prior to C++23, the C++ standard says that a constexpr function must return a constexpr value for at least one set of arguments, otherwise it is technically ill-formed.  

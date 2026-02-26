@@ -1,0 +1,160 @@
+10.1
+  -Difference btw implicit conversions vs narrowing conversions
+    -Implicit - conversion where precision/ values are not lost
+      eg: double d{3}; //very legal, and it's implicit conversion cuz 3 despite being an int can be perfectly represented by double
+    -Narrowing - conversions where precision is lost
+      eg: float f{3.1415};//can lose precision when converting double to float
+  -Type conversions are like function, it doesn't transfrom the  input and just produces the required output. Like a pure function
+
+10.2 Numerical promotion
+  -Some pc can only manipulate 32 bit or 64 bit, and for some, even tho they can manipulate smaller bits like 8 and 16 it's usually slower. So for that compiler does numerical  
+    promotion.
+  -It's a safe type of promotion i.e no data is lost. When converting char to int , nothing is lost so compiler will not warn about it
+  NOTE:
+    void printInt(int x)
+    {
+        std::cout << x << '\n';
+    }
+    If u wanna pass values of type short or char to this function, that's perfectly valid too. Numerical promotion happens automatically
+  -bool -> int is numerical promotion too
+  -Two types floating point promotin (float -> double) and intergral promotion (promotion between lower intergral types to greater ones)
+  NOTE: char-> short and int->long is not considered under this category
+
+10.3 Numerical promotions
+  -Any integral conversions except integral promotion or any floating point conversion except floating point promotion
+    eg: int -> double
+        int -> short
+        int -> unsigned int
+        float -> bool etc...
+
+  -Can be safe or unsafe
+  Types: 
+    Value preserving conversions: u can convert and nothing's lost
+    Reinterpretative conversions: usually safe but value might be lost, unsigned->int or back
+    Loosy conversion: unsafe and might be lost during conversion  eg: float to int, double to float etc
+
+  NOTE: signed unsigned unconversions give u no warning, u can enable it tho
+
+10.4
+  -If you NEED to perform narrowing convesion use static_cast<>
+  -narrowing conversion is disallowed inside uniform initialization
+  -There are some constexpr exclusion clauses for narrowing types that makes things even weirder:
+    constexpr double {0.1};
+    float f {d}; -> WORKS even if there's loss in precision
+  NOTE: the constexpr exclusiong clause does nto apply for floating point to int conversions
+
+10.5
+  -Ranking for arithmetic conversion:
+    long double (highest rank)
+    double
+    float
+    long long
+    long
+    int (lowest rank)
+
+  -long long var {int + long long};-> converting int to long long cuz that's higher in ranking
+    
+NOTE: when u add 2 shorts both get promoted to int frist and then added. Cuz they don't appear on the list
+
+  #include<typeinfo>
+
+  int main(){
+    short s{3};
+    short p {4};
+    std::cout << typeinfo(s + p).name() << s + p;
+  }
+  this will print int 9
+
+-signed and unsigned rules:
+  std::cout << (-3 + 5u);
+  this will print a really big num cuz signed is converted to unsigned in such cases
+  std::cout << std::boolalpha <<(-3 < 5u);
+  will give false instead of true as -3 will be really big value converted to unsigned
+
+-std::common_type -> in <type_traits> can be used to find common type between 2 types
+  std::common_type_t<int, double> returns common type of int and double
+  std::common_type_t<unsigned int, long> returns the common type of unsigned int and long
+
+10.6
+  -static_cast<> casting in compile time
+  -const_cast<> convert const to to non const
+  -reinterpret_cast<> conver type without changing the bits. So converting 3.0 to int, will not make it 3 but somthing else
+  -dunno what's up with dynamic casting
+  -c style casting does these in order: (2 ways to do this, either int(a) or (int)a)
+      const_cast
+      static_cast
+      static_cast, followed by const_cast
+      reinterpret_cast
+      reinterpret_cast, followed by const_cast
+  NOTE: static cast does compile time checking so if the convesion can't be done the compiler give u warning/ error
+  -This is leagl with static_cast<>:
+    int i { 48 };
+
+    // explicit conversion from int to char, so that a char is assigned to variable ch
+    char ch { static_cast<char>(i) };
+  NOTE: temporary variables (?): std::cout << int{d}; -> prints d as int, creates temporary int variable first tho
+        But not always possible cuz it only allows 1 word, this is illegal
+        std::cout << unsigned int {i};-> illegal
+        we can do:
+        using uint = unsigned int;
+        std::cout << uint{a};
+        this is legal but the best way to do is to use static_cast<>
+
+10.7 
+  -Type aliasing:
+    using Speed = long;
+    using Miles = long;
+  NOTE: type aliasing in C++ is type unsafe. i.e in the above example u can do airthmetic between Speed and Mile without any error or warnings from the compiler. Typesafe usually 
+        means compiler warns u from doing it.
+        THis happens because the underlying type of both the Speed and Mile is the same
+  -typedef, same as type aliasing but confusing. Like:
+    using funcptr = int(*)(double, double); i less confusing than using
+    typedef int (*funcptr)(double, double); to type alias a function pointer
+
+10.8
+  -Type deduction with auto
+    double d{5.0}; a little redundent as 5.0 is a double and double implies double too so better is
+    auto d {5.0}; NOTE: this will initialize 5.0 to be std::initializer_list<double> rather than double before C++14 so just be careful
+  -Type duductor should have something to deduce from:
+    You can't use auto just to declare a variable or attached it to something void
+    eg: auto a; -> invalid;
+        auto a = foo(); -> invalid if foo returns void
+    NOTE: using auto in fundamental data types may only save a few keystrokes for now but it's would be much much more useful laterr
+  -Type duduction drops the const:
+    const int a{5};
+    auto b {a}; -> here b will be of type int only
+    IF you want b to be const too do:
+    const auto b {a};
+  -Due to string's weird history type deduction for string is a bit weirder:
+    using namespace std::literals (for sv and s sufix)
+    auto s {"Hello"}; //duduces to be c type string
+    auto s {"Hello"sv};//deduces to be std::string
+    auto s {"Hello"s};//deduces to be std::string_view
+  -Constexpr is not a type too so it will be dropped and shall be manually applied:
+    constexpr int d{5};
+    constexpr auto a {d}; -> constexpr dropped but reapplied
+
+10.9
+-type deduction in functions:
+-we need the entire function declaration if we wanna use auto as return type forward dec does not work:
+  auto add (int x, int y){
+      return x + y;
+  }-> NO FORWARD DECLARATION
+ -triliang return:
+  auto add(int x, int y) -> int{
+      return x + y;
+    }
+  also works.
+-The triling return is mandatory when the return type must be determined using the type of parameters:
+  std::common_type_t<decltype(x), decltype(y)>add(int x, int y){
+      return a + b;
+    }
+  This will be illegal as the compiler has not seen s and y yet, better would be:
+  auto add(int x, int y)-> std::common_type_t<decltype(x), decltype(y)>{
+      return x + y;
+    }
+
+NOTE: can't use auto for function parameters
+
+
+

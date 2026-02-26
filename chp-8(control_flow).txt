@@ -1,0 +1,217 @@
+8.1:
+-if constexpr: the condition must be evluatable at compile time else error is thrown
+                only compiles the code that's good according to the condition, completly discards the one that's not along the evaluated branch
+                even if the other branch might throw error it's not considered at all, not even a warning, it's just thrown out.
+      eg:
+        if constexpr (gravity == 9.8) // now using constexpr if
+            std::cout << "Gravity is normal.\n";
+          else
+            std::cout << "We are not on Earth.\n";
+NOTE: compiler that encounters a non-constexpr if-statement with a constexpr conditional may issue a warning advising you to use if constexpr instead. This will ensure that compile-time evaluation will occur (even if optimizations are disabled).
+8.5:
+-switch case can only be used for integral values due to optimization reasons
+-preferred switch case format (no indentation for cases )
+    // Preferred version
+    void printDigitName(int x)
+    {
+        switch (x)
+        {
+        case 1: // not indented from switch statement
+            std::cout << "One";
+            return;
+        case 2:
+            std::cout << "Two";
+            return;
+        case 3:
+            std::cout << "Three";
+            return;
+        default:
+            std::cout << "Unknown";
+            return;
+        }
+    }
+8.6:
+-if u wanna make a switch case fallthrough use [[fallthrough]]. THis makes compiler not complain and good doc habit
+  eg:
+
+    int main()
+    {
+        switch (2)
+        {
+        case 1:
+            std::cout << 1 << '\n';
+            break;
+        case 2:
+            std::cout << 2 << '\n'; // Execution begins here
+            [[fallthrough]]; // intentional fallthrough -- note the semicolon to indicate the null statement
+        case 3:
+            std::cout << 3 << '\n'; // This is also executed
+            break;
+        }
+
+        return 0;
+    }
+-Alternate for OR:
+  bool isVowel(char c)
+  {
+      return (c=='a' || c=='e' || c=='i' || c=='o' || c=='u' ||
+          c=='A' || c=='E' || c=='I' || c=='O' || c=='U');
+  }
+
+  bool isVowel(char c)
+  {
+      switch (c)
+      {
+      case 'a': // if c is 'a'
+      case 'e': // or if c is 'e'
+      case 'i': // or if c is 'i'
+      case 'o': // or if c is 'o'
+      case 'u': // or if c is 'u'
+      case 'A': // or if c is 'A'
+      case 'E': // or if c is 'E'
+      case 'I': // or if c is 'I'
+      case 'O': // or if c is 'O'
+      case 'U': // or if c is 'U'
+          return true;
+      default:
+          return false;
+      }
+  }
+  NOTE: this one is not considered fall through so no need for the [[fallthrough]] label
+
+NOTE: case or default lables don't start a new scope, all scoping is inside the switch block
+    eg:
+      switch (1)
+      {
+      case 1: // does not create an implicit block
+          foo(); // this is part of the switch scope, not an implicit block to case 1
+          break; // this is part of the switch scope, not an implicit block to case 1
+      default:
+          std::cout << "default case\n";
+          break;
+      }
+NOTE: Cannot intialize inside switch case lable and anything between switch and the first case lable is ignored
+  eg:
+  switch(val){ //say val is 2
+  case 1://this will entirely be skipped
+    int a = 1;
+    std::cout << a;
+    break;
+  case 2://case one is skipped, and this will be called
+    std::cout << a;//HERE a is in scope from case 1, but it hasn't been initialized yet... so this will be a massive error
+    break;
+  default:
+    std::cout << 'wtf>';
+  }
+
+  SO due to above reason initialization inside case lable is simpley not allowed
+
+8.7: go-to statements
+-Statement lable utilizes function scope, i.e the goto lables are visible in the function even before it's declaration. So, goto statement and the correspoinding lable must appear
+  in the same function
+-Statement lable must be attached to an actual statement, cuz the lable is just a place where the statementshould start next. A workaround is a null statement:
+    void process(int* data) {
+        if (!data) goto cleanup;
+        
+        // ... logic ...
+
+    cleanup:
+        ; // The null statement. Now the label is "associated with a statement."
+    }
+-you can't initialize a variable in between a goto statement and a label that's going backwards
+
+8.8
+-std::exit() is called implicitly when u return from main()
+-to call it explicitly use cstdlib library
+-std::atexit() is used to setup the function u wanna call before std::exit() exits.
+NOTE: std::exit does not do stack unwinding stuff, u gotta do that manually with try catch block to catch exception at main and return from main for proper unwinding
+  eg: usage of std::atexit()
+  #include <cstdlib> // for std::exit()
+  #include <iostream>
+
+    void cleanup()
+    {
+        // code here to do any kind of cleanup required
+        std::cout << "cleanup!\n";
+    }
+
+    int main()
+    {
+        // register cleanup() to be called automatically when std::exit() is called
+        std::atexit(cleanup); // note: we use cleanup rather than cleanup() since we're not making a function call to cleanup() right now
+
+        std::cout << 1 << '\n';
+
+        std::exit(0); // terminate and return status code 0 to operating system
+
+        // The following statements never execute
+        std::cout << 2 << '\n';
+
+        return 0;
+    }
+-std::abort() ->does abnormal termination, eg trying to divide by 0. Assert calls std::abort explicitly upon failure
+-std::terminate() calleddddd during exceptions, it calls std::abort() implicitly
+-std::exit() is not thread-safe, use std::quick_exit() for that
+
+  #include<iostream>
+  #include<random> //for std::mt19937 OR std::mt19937_64, for 32-bit and 64-bit random number
+
+  int main(){
+    std::mt19937 mt{}; //seed with default values
+    for(int i{}; i <= 40; i++){
+      std::cout << mt() << '\n';
+    }
+    return 0;
+  }
+
+  if we need number between 1-6 (for a die) we can use std::uniform_int_distribution
+
+  #include<iostream>
+  #include<random>
+
+  int main(){
+    std::mt19937 mt{};
+    std::uniform_int_distribution die6{1, 6};
+    for(int i {0}; i <= 40; i++){
+        std::cout << die6(mt()) << '\n';
+    }
+  }
+NOTE: when u call a variable (object), the compiler calls variable_name.operator(). An object that defines this is called an functor
+-seeding marsenne twister with clock
+
+  #include <iostream>
+  #include <chrono>
+  #include <random>
+
+  int main(){
+    std::mt19937 mt{static_cast<std::mt19937::result_type>(std::chrono::steady_clock::now().time_since_epoch().count())};
+    std::uniform_int_distribution die6{1, 6};
+
+    for(int count{}; count <= 40; i++){
+        std::cout die6(mt) <<  '\n';
+      }
+  }
+
+NOTE: we also have std::chrono::high_resolution_clock which uses the most granular unit of time, however it uses the user's system time which the user can change anytime
+
+-initializing martenne twister with std::random_device
+
+  std::mt19937 mt {std::random_device{}()}; // here std::random_device{} create a temp object of type std::random_device and () calls the .operator() on that object
+NOTE: seed your PRNG only ONCE, reseeding should be avoided in most cases
+NOTE: The integers allocated by std::mt19937 are defined to be of type std::uint_fast32_t, which could be 32-bit or 64-bit integers depending on the architecture. If 
+    std::uint_fast32_t resolves to a 64-bit integer, std::mt19937 will use 624 64-bit integers, making it double the size it needs to be.
+NOTE: internal state of mt19937, there are 624 32 bit and 312 16 bit values, each gets used in a sequence while another one is calculated for each, this make the period of mt to
+    be longer than age of universe in milliseconds
+    For this reason it's best if we give it 624 values at the beginning, giving only one makes it calculate the other 623 by itself which might not be very random
+    So we use std::seed_seq to initialize the 624 numbers but using just 8 random_device() stuff, and rest will be calcuated by std::seed_seq
+
+    eg:
+
+    std::random_device rd{};
+    std::seed_seq ss {rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd()};
+    std::mt19937{ss}; //initialized our mt
+
+NOTE: the first few hundered or thousand might no be random enough so good to perform a warmup and discrad them. But std::seed_seq does that for us
+
+8.x
+-when checking if a num x is prime, checking beyond it's std::sqrt(x) is not necessary

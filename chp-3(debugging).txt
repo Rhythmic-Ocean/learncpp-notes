@@ -1,0 +1,2 @@
+3.4
+-std:cerr is better for printing during debugging or just for printing logs in general cuz it doesn't buffer.

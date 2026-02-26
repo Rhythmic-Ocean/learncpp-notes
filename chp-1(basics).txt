@@ -1,0 +1,35 @@
+Objects in General Programming -> to an unnamed object in memory, a variable, or a function.
+Objects in C++ -> Place in memory where stuff are stored. C++ excludes function in an object's definition
+Variable -> An object with an indentifier (name)
+Declaration -> Telling the compiler "this stuff exists, trust me" eg:
+                extern int x;
+Definition -> Telling the compiler to make it exist. eg:
+                extern int x = 5;
+Initilizatin -> Lotss of way to initilize variable. Best one's direct-list Initilization and value Initilization
+                i.e : int x {1};
+                      int x {}
+                If you are not going to use certain variables, use [[maybe_unused]]
+                eg:
+                  [[maybe_unused]] int x {4}
+                Also direct list Initilization does not allow for narrow conversions i.e
+                eg: 
+                  int width {4.5};
+                  will give error
+                  but:
+                  int width = 4.5; (copy initilization)
+                  will just initialize width as 4. 
+New Line (and flushing) -> \n and std::endl both works. Prefer the former in most cases as the latter does flusing + new line while \n just makes new line
+
+NOTE: std:cout buffers before printing, i.e it doesn't flush immediatly upon being called but periodically, use std::endl for force flush
+
+<< is extraction stuff, and input is a little funky
+std::cin : ignores all forward white space and upon encountering a valid character, reads until the next whitespace, and puts the valid stuff in the variable
+         : If extractin fails, (like the variable is int but user givs char), then extration will just constantly fail until input buffer is cleared. Any further
+              attempts at extraction will have the variables be assigned default values (like 0s for int, '\0' for char etc.)
+
+Operators:
+  << insertion operator -> eg: std::cout << "Hello World!"; means insert "Hello World" to output buffer 
+  >> extraction operator -> eg: std::cin >> x; extract x in input buffer.
+
+  NOTE: +, - are used for their return values and assignment and extraction, insertion stuffs are used for their side effects.
+        std::cout<<"Hello" returns std::cout

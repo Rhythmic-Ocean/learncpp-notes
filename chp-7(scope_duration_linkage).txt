@@ -1,0 +1,235 @@
+7.2:
+:: -> cope resolution operator
+this is legal:
+        circle.h:
+
+              #ifndef CIRCLE_H
+              #define CIRCLE_H
+
+                namespace BasicMath
+                {
+                    constexpr double pi{ 3.14 };
+                }
+
+              #endif
+
+    growth.h:
+
+              #ifndef GROWTH_H
+              #define GROWTH_H
+
+                namespace BasicMath {
+                    // the constant e is also part of namespace BasicMath
+                    constexpr double e{ 2.7 };
+                }
+
+                #endif
+    using same namespace uopn multiple files for declearation
+
+  and we can do BasicMath::e or BasicMath::pi 
+
+empty :: i.e :: without a prefix is used to refer to global variables. Useful specially when u wanna use global vars from within a namespace
+nested namespace is legal but not recommended beyond 3
+      namespace BasicMath {
+        namespace preCalc{
+            constexpr double e{ 2.7 };
+          }
+      }
+  we can refer to the const with
+    BasicMath::preCalc::e
+
+7.4:
+-Variables defined inside a namespace are global variables as well!!
+  eg:
+    namespace Foo // Foo is defined in the global scope
+    {
+        int g_x {}; // g_x is now inside the Foo namespace, but is still a global variable
+    }
+  Although limited inside namespace Foo, we can still access it by Foo::g_x
+-they are accessable from anywhere in the file
+-they have static duration i.e they are created before main() and destryoed at end of program
+-prefer prefixing your global variable with g or g_, specially if they are in global namespace (or even in userdefined namespace is fine)
+NOTE: local variables can be left uninitialized by default:
+    int a;
+    BUT global variable are ALWAYS zero initialized if left like above:
+    int a; -> if this is global than a = 0, if local then a is unitilized.
+NOTE:
+  int a{}; -> means zero initialized not matter local or global
+-global const or constexpr MUST always be initialized
+    const int g_y;           // error: const variables must be initialized
+
+7.5: name-shadowing
+-we can shadow local (if they are in outer block and we in inner) and global variables
+-but even after shadowing we can access global ones with :: prefix but the same can't be said about local variables
+-we can use -Wshadow and related flags with g++(gcc) to get warnings about shadowing
+
+7.6
+-Identifiers with internal linkage might not be visible to linkers at all! Alternatively we can make them visible to linkers but only for specific translation units
+NOTE: translation unit is just a file (like main.cpp or utils.cpp) that is left after pre-processor has done it's work on the file. When we ask compiler to compile a file and give
+      it a list of them it compiles them TRANSLATION UNIT (file with preprocessing done) at a time. And linker later links them
+-when u define a var with internal linkage in a header and #include it in other .cpp files, all those files basically owns their own copy of that internal variable (name for vars
+      with internal linkage).
+NOTE: ODR (one definition rule) does not apply to internal vars cuz they can't be seen by other TUs. However if u have one super large global const and have it included in multiple
+      files then the program might be really big as all will be copied individually
+-global const and constexpr are internally linkaged by default
+-giving static keyword to a global var (which is externally linkaged by default) will make it internally linkaged
+NOTE: static is one of the storage class specifier along with extern and mutable. They set a variable's linkage and storage duration
+-you can define a function multiple files IN MULTIPLE TRANSLATION UNITS given you use static keyword for each
+
+7.7
+-functions have internal linkage by default as long as they are forward declared i.e
+
+  a.cpp
+    void sayHi() // this function has external linkage, and can be seen by other files
+    {
+        std::cout << "Hi!\n";
+    }
+
+  main.cpp
+    void sayHi(); // forward declaration for function sayHi, makes sayHi accessible in this file
+
+    int main()
+    {
+        sayHi(); // call to function defined in another file, linker will connect this call to the function definition
+
+        return 0;
+    }
+
+NOTE: We don't need to include main.cpp to a.cpp to use this, as long as we compile them together linker will pick it up for us
+-in C++ int x; in itslf is a definition too, so including it in a header file will cause ODR violation if the file is included in multiple files
+-ONLY way to declare is extern int x; So best way is it have extern int x; in header, it's definition in a .cpp file and include header everywhere.
+    extern int x; -> forward declaration for variable x;
+-USE extern for const variable that will be exported outside, but not for int as they are external linkaged by default unless u r trying to forward declare them. 
+-To forward declare either use extern for both const and non const.
+  Eg:
+  main.cpp
+    extern int g_x;       // this extern is a forward declaration of a variable named g_x that is defined somewhere else
+    extern const int g_y; // this extern is a forward declaration of a const variable named g_y that is defined somewhere else
+
+    int main()
+    {
+        std::cout << g_x << ' ' << g_y << '\n'; // prints 2 3
+
+        return 0;
+    }
+
+  a.cpp
+    int g_x { 2 };              // non-constant globals have external linkage by default
+    extern const int g_y { 3 };
+
+NOTE: using extern int g_x{1}; is technically valid, as compiler will just ignore the extern keyword
+
+7.8
+-Avoid non const global vars as much as possible
+-Initialization order of global variables: 
+    First phase - Static Initialization:
+      First the ones with constexpr values, like int x = 5; or const int = 5; or constexpr char p = 'a'; or int a;  which will be 0 initilized
+    Second phase - Dynamic Initialization:
+      global var with non const expr are defined
+
+    When within the same TU the First phase happens first for each suitable vars in order they were written and same happens for second one
+    BUT if there are multiple TUs there's no gurentee regarding which TU gets initialized first. So if there are variable initialization that depends on other TU's initialization,
+      there's 50% chance it won't happen
+-Some good reasons for non const globals:
+  random num generator
+  log files
+NOTE: Best practices;
+        Define global vars within a namespace:
+            namespace constants{
+              extern constexpr int a = 5;
+            }
+        Even better, don't give direct access
+            namespace constants{
+              constexpr int a = 5; //has internal linkage only
+            }
+            int getGrav(){
+                return constants::a;
+            }
+        If u need a function that uses global, better to pass it as argument:
+          namespace constants
+          {
+              constexpr double gravity { 9.8 };
+          }
+
+          // This function can calculate the instant velocity for any gravity value (more useful)
+          double instantVelocity(int time, double gravity)
+          {
+              return gravity * time;
+          }
+
+          int main()
+          {
+              std::cout << instantVelocity(5, constants::gravity) << '\n'; // pass our constant to the function as a parameter
+
+              return 0;
+          }
+
+7.9: Iniline stuff:
+-having a function inline will decrease cost of function call overhead, but if it's too big then the program might no fit in the memory cache and be much slower than normal
+-normally compilers optimize for inline after evaluating each function
+-historically inline function was used as a compiler hint to tell that a function could be inline
+-nowadays it's used to extempt a function from ODR, as long all of the definition of the said inline function are literally the same
+    Purpose - to make it easier for compiler to inline the function, as the compiler needs the function to be in the same TU for it to inline it
+-Best practice is the put the inline function in a header file and include it in whichever file we need
+-Some function types are implicitly inlined:
+    functions inside class/ structs or unions
+    constexpr/ consteval funcs
+    functions initiated from func templates
+
+7.10 - C++17 put inline variables
+-constants are internal linkaged by default, if we use inline keyword on it it becomes external linkaged, and ODR extempt as long as it has same definition everywhere
+-we put inline constants in a header file and include it everywhere we need it. That way linker will use 1 definition for all and save use some space
+-std::string_view for constexpr
+
+7.11:
+-static local variables have static duration, and redefinition (i.e calling the function with static variable again) is ignored
+-non const static variables specially when i changes program flow shoudl usually be avoided unlesss used forspecific purposes
+-local vars normally have automatic duration, created inside he block they are defined in and destroyed once out of scope
+
+7.13
+-when using the using keyword, best to use the full directive and don't make it global!, eg:
+    if u wanna shortcut cout, do:
+      using std::cout; --> and use cout everywhere
+      insead of using std;
+
+7.14 unnamed and inlined namespace
+-static functions - functions that have internal linkage.
+NOTE: putting stuff inside namespace does not change is scope or linkage or anything, but putting it inside an unnamed namespace changes it's linkage to internal so:
+    namespace{
+        int func( int x){ -> not it's like static int func(int x) {}
+          return x+2;  
+        }
+      }
+
+    So putting inside unnamed namespace is like making it static, but since we can do it to a block of code, it's more convineit
+-prefer not to defined unnamed namespace in header files
+-when u put stuff in unnamed namespace, they can be referred without any :: stuff
+-inline namespace -> same as unnamed namespace but with no internal linkage stuff. Used for version control stuff
+  eg:
+    inline namespace V1 // declare an inline namespace named V1
+    {
+        void doSomething()
+        {
+            std::cout << "V1\n";
+        }
+    }
+
+    namespace V2 // declare a normal namespace named V2
+    {
+        void doSomething()
+        {
+            std::cout << "V2\n";
+        }
+    }
+
+    int main()
+    {
+        V1::doSomething(); // calls the V1 version of doSomething()
+        V2::doSomething(); // calls the V2 version of doSomething()
+
+        doSomething(); // calls the inline version of doSomething() (which is V1)
+
+        return 0;
+    }
+-qualified name -> uses associated namespace name eg: std::string
+  unqualified name -> opposite of that eg: string

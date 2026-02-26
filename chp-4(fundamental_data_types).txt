@@ -1,0 +1,89 @@
+4.3 void:
+-C++ standard only gurentees the minimum size of fundamental data types, like int must at least be 2 bytes, tho it's commonly 4 bytes in 64-bit machines
+-cannot initiate a variable with void:
+      void hello; -> compiler error
+
+4.4 signed int:
+-technically bool and chars are integral types too
+-short, int, long, long long -> 2, 2, 4, 8 are gurenteed min sizes, they can also be prefixed with 'signed' keyword
+
+4.5 unsigned int:
+-C++ standard does not call unsigned overflow as overflow but we say that by convenction
+-however unliked signed overflow the behaviour is not undefined, rather the value will wrap around, eg: for unsiged char, assigning 280 would wrap around 255, use remainder of 280/256 as the answer for that unsigned calcuation
+-in operations involving both signed and unsigned stuff, signed variable is turned into unsigned one, this can cause some unexpected error so be careful
+-so unsigned is generally discouraged outside of some cases like embedded development, array indexing and bit manipulation
+
+4.6: fixed size int:
+-int8_t is just char, printing it with console.cout will print A.
+-similar for int16_t and int32_t etc... in 32 bit sys, int16_t is just aliasing int
+-we have int_least8_t (more general would be int_least#_t where # is 8, 16 or 32 or 64 too ig), it has uint version too
+-we also have int_fast#t with numbering and having corresponding unsigned type too
+-in a 64 bit maching 16 bit might be slower than 64 as processor is made to crunch 64 bit at a time
+-std::size_t is of at least of 16 bit, and sizeof returns of type size_t when called. It's basically unsigned int
+NOTE: in c++20 standard, making an obj of size greater than the value that std::size_t can store is ill-formed and will cause compiler error, most compiler generally has it halved tho
+
+4.7 floating points:
+-uses IEEE 754 standard for float and double, might be different for long double
+-when u do:
+  float d = 3.5;
+  3.5 is double by default and there will be a type conversion might lose precision
+  best is to have float literal 
+  float d = 3.5f;
+-std::cout can only print upto 6 digits by default if u want more, do:
+  std::cout << std::setprecision(17); //from <iomanip>
+  std:cout << 0.33333333333333333333333333333333333333f;
+
+  Now output will show 17 digits or all digits, whichever is less. Won't be precise tho, cuz float is only precisie till 6-7 digits
+  std::setprecision is an output manipulator and they are sticky with an (maybe?) exception of std::setw
+
+4.9 boolean
+-by default std::count prints true as 1 falst as 0, if u wanna print it in words do:
+    std::cout << std::boolalpha;
+    to get out of that state do:
+    std::cout << std::noboolalpha;
+-narrow type conversion is not allowed so:
+  bool bo{2}; is error, only works with 0 and 1
+  HOWEVER, copy initialization turs 0 to false and any other num to true:
+  bool b = 2; works!
+-you can take the words true or false as input too if u do:
+  std::cin >> std::boolalpha;
+  BUT in this state std::cin no long accepts integers (which is the only thins it accepts normally)
+  do:
+    std::cin >> std::noboolalpha to get out of this state
+
+4.11 chars:
+-std::cin lets u enter multiple chars, but char variable can only take one type, so only one will be given while rest will be in input buffer.
+    You can do std::cin >> x; for multiple variables to extract all the characters tho.
+-std::cin ignores whitespaces, if u wanna have it not ignore it, do std::cin.get():
+  char ch{};
+  std::cin.get(ch);
+  std::cout << "You entered: " << ch;
+  std::cin.get(ch);
+  std::cout << "you Entered: " <<ch;
+
+  Here if input was, a b (whith the space), output would be:
+  You entered: a
+  You entered: (space)
+-AVOID multi character literals, eg: '59', might give weird outputs
+-char8_t, char16_t and char32_t are for unicode stuff. generally not needed. wchar_t is implementation defined and not recommended to be used expect in very special cases
+
+4.12:
+-implicit type conversion of a value produces new temp object of the new type, it's not really "converted"
+  eg:
+  float a {1.0};
+  std::cout << a;
+
+  here the compiler takes 1.0 as input, create a temporary int object with value 1, and gives it to output console.
+-Copy initialization allows narrow type conversion, which can result in data loss:
+  float b {2.5};
+  int a = b;
+  (a will be 2)
+  but braces initialization does not allow this and will throw error
+
+EXPLICIT TYPECASTING:
+  use keyword: static_case<type>(expr)
+  eg:
+    int a {65};
+    std::cout << static_cast<65>(a); (prints A)
+
+NOTE: Integer overflow is implementation defined before c++20 but in c++20 it's just -1.

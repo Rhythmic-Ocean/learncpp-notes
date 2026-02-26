@@ -1,0 +1,252 @@
+9.1
+-unit testing : testing non trival functions/ part of the program individually
+-integration testing : testing the entire program with all it's parts
+
+9.2
+-statement coverage: how much of a function's statement is executed with one call:
+  int foo(int x, int y)
+  {
+      int z{ y };
+      if (x > y)
+      {
+          z = x;
+      }
+      return z;
+  }
+  here, foo(1, 0) has 100% coverage
+
+  bool isLowerVowel(char c)
+  {
+      switch (c) // statement 1
+      {
+      case 'a':
+      case 'e':
+      case 'i':
+      case 'o':
+      case 'u':
+          return true; // statement 2
+      default:
+          return false; // statement 3
+      }
+  }
+  here we have 3 statement, but it's impossible to reach 100% with 1 call, each call can at max reach 75% statement coverage
+
+
+-branch coverage: percentage of branches that have been executed, each possible branch counted separately
+  eg:
+  int foo(int x, int y)
+  {
+      int z{ y };
+      if (x > y)
+      {
+          z = x;
+      }
+      return z;
+  }
+
+  here foo(1,0) has 100% coverage
+  bool isLowerVowel(char c)
+  {
+      switch (c)
+      {
+      case 'a':
+      case 'e':
+      case 'i':
+      case 'o':
+      case 'u':
+          return true;
+      default:
+          return false;
+      }
+  }
+isLowerVowel('a')) isLowerVowel('q')) gives u 100% here
+
+aim for 100% branch coverage during test
+
+-loop coverage: do 0,1,2 test, test on 0th, 1st and 2nd value and everything greater than 2 should be good
+
+-Test different categories of input values to make sure your unit handles them properly.
+
+9.3:
+-accidental null statement
+    if (c == 'y');     // accidental null statement here
+        blowUpWorld(); // so this will always execute since it's not part of the if-statement
+
+    return 0; 
+
+-sentinel value: a value that has some special meaning, eg:
+    // The reciprocal of x is 1/x, returns 0.0 if x=0
+    constexpr double error_no_reciprocal { 0.0 }; // could also be placed in namespace
+
+    double reciprocal(double x)
+    {
+        if (x == 0.0)
+          return error_no_reciprocal;
+
+        return 1.0 / x;
+    }
+
+    here we can check for 0.0 when calling the function, and if we get it we can report it as error_no_reciprocal error. It works cuz 0.0 is a sentinal value which can never occur
+    normally for this function.
+-for fatal error just do: std::exit(1)
+
+9.5:
+-if std::cin fails once, any subsequence std::cin will fail until std::cin is cleared
+# cases where std::cin extraction fails:
+  1.Extraction success but input  meaningless:
+    we can just do input validation after extraction
+      char getOperator()
+      {
+          while (true) // Loop until user enters a valid input
+          {
+              std::cout << "Enter one of the following: +, -, *, or /: ";
+              char operation{};
+              std::cin >> operation;
+
+              // Check whether the user entered meaningful input
+              switch (operation)
+              {
+              case '+':
+              case '-':
+              case '*':
+              case '/':
+                  return operation; // return it to the caller
+              default: // otherwise tell the user what went wrong
+                  std::cout << "Oops, that input is invalid.  Please try again.\n";
+              }
+  2. Extraction success but extra stuff in input:
+    We can just clear everything in it after subsequent inputs:
+    maybe put this inside a function:
+    void ignoreLine()
+    {
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
+    or if user inputs more things than we might have expected, we can just throw error:
+
+    / returns true if std::cin has unextracted input on the current line, false otherwise
+    bool hasUnextractedInput()
+    {
+        return !std::cin.eof() && std::cin.peek() != '\n'; true if std::cin has either reached eof or the last char was \n
+    }
+
+    double getDouble()
+    {
+        while (true) // Loop until user enters a valid input
+        {
+            std::cout << "Enter a decimal number: ";
+            double x{};
+            std::cin >> x;
+
+            // NOTE: YOU SHOULD CHECK FOR A FAILED EXTRACTION HERE (see section below)
+
+            // If there is extraneous input, treat as failure case
+            if (hasUnextractedInput())
+            {
+                ignoreLine(); // remove extraneous input
+                continue;
+            }
+
+            return x;
+        }
+    }
+
+  3.Extraction itself fails
+    in this case, std::cin simply refuses to perform any other operation, even .ignore operation won't be performed. std::cin has different flags inside it, and any failure triggers
+    on of the fail flags making it disfunctional. We should do std::cin.clear() to clear to flag, ignoreLine() to ignore everything, and make the user redo input
+    NOTE: std::cin itself will return false when in false state:
+      if(!std::cin){
+          std::cout << "Failed";
+        }
+      OR std::cin.fail() returns true too
+      so we can:
+      if (!std::cin) // If the previous extraction failed
+      {
+          // Let's handle the failure
+          std::cin.clear(); // Put us back in 'normal' operation mode
+          ignoreLine();     // And remove the bad input
+      }
+
+NOTE: if there's nothing in std::cin or just leading whitespaces, it will just wait for input. EOF in C++ is error state not a character
+      You can manually generate EOF with Ctrl+D in Unix system and Ctrl+z+ENTER in windows
+NOTE: Upon seeing EOF (ctrl + d in unix systems), everything in std::cin is flushed (deleted), and EOF is raised (and program's terminated)
+    so we might find ourself in a scenerio when the user enters ctrl+d but we immediatly clear it, as it also triggers std::cin to be false:
+    eg:
+
+    int main() {
+      int i{};
+      while (true){
+        std::cout << "Enter something.";
+        std::cin >> i;
+        std::cin.clear();
+      }
+      return 0;
+    }
+
+    here ctrl+d signal is never picked up and we get stuck in infinite loop
+
+    so to take care of that we check for eof using std::cin.eof() and if that's the stuff being set we just exit the program instead of clearing it out
+
+    #include <limits>
+    void ignoreLine(){
+      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '/n');
+
+
+    }
+
+    bool clearFailedExtraction(){
+      if(!std::cin){
+        if(std::cin.eof()){
+            std::cout << "Got inturrupt signal. Exiting";
+            std::exit(0);
+          }
+        std::cin.clear(); //clearing the rest of error
+        ignoreLine();
+        return true;
+      }
+      return false;
+
+    }
+  4: Extraction succeeds but the user overflows a numeric value
+
+    NOTE: when you do:
+        int16_t x{};
+        std::cin >>x;
+
+        and you give it a large number like 400000, stdin will just give x the largest number it can handle, 32767 in this case.
+        furthermore, stdin also immediatly goes into failure mode
+
+SO FOR EXTRACTIONS, MAKE SURE THE FOLLOWING CHECKLISTS FOLLOW:
+    Could extraction fail?
+    Could the user enter more input than expected?
+    Could the user enter meaningless input?
+    Could the user overflow an input?
+
+9.6:
+NOTE: std::abort() explicitly core dumps (the memory of the file at the  moment of abortion) which can then be used for debugging purposes. std::exit() does not do it
+-precondition : something that must be true before a piece of code is executed
+-invarient : a condition that must be true while a section of the code is execution 
+-postcondition: a condition that must be true after a piece of code executes
+
+BOUNCER PATTERN:
+    void printDivision(int x, int y)
+    {
+        if (y != 0)
+        {
+            std::cout << static_cast<double>(x) / y;
+        }
+        else
+        {
+            std::cerr << "Error: Could not divide by zero\n";
+            return; // bounce the user back to the caller
+        }
+    }
+-assert() to check if a condition is true at runtime. static_assert() if u wanna do that at compile time
+-assert() should not be there in production code, you can disable it by #define NDEBUG, it has some overhead even if not error is reported
+-static_assert() does not have such overhead so fine for production
+ eg of assert:
+  assert(found && "Car could not be found in database");
+  here the latter is always true, so if former is ture, std::abort is called, and program is terminated. We have the second part for message and clarity
+ eg of static_assert:
+  static_assert(sizeof(long) == 8, "long must be 8 bytes"); --> check's done at compile time
+
+NOTE: A buffer is a piece of memory set aside for storing data temporarily while it is moved from one place to another.

@@ -1,0 +1,61 @@
+o.1:
+-std::bitset<> is of size 8 bytes even if u only made it to use 8 bits (1 byte), it's for speed not space
+    size() returns the number of bits in the bitset.
+    count() returns the number of bits in the bitset that are set to true.
+    all() returns a Boolean indicating whether all bits are set to true.
+    any() returns a Boolean indicating whether any bits are set to true.
+    none() returns a Boolean indicating whether no bits are set to true.
+    there's also set, reset and flip
+
+o.2:
+NOTE: bit manipulation with std::bitset<> is slower, better to do it with uint types
+NOTE: signed bit manipulation can give undefined behavious so be extremly cautious i.e just NEVER use it unless u know what u r doing and why
+
+However, without bitset abstraction a few hurdles can come about:
+  -say you wanna operate on an 8 bit (1 byte) bit pattern, 
+     uint8_t bits {0b00110011}; 
+     std::cout << ~bits;
+      however before the cpu even touches it for ~ operation it promotes it to int, so it's gonna be 0b000000....00110011;
+      and this will be upon negation 0b1111111111111111....11001100;
+      which might be unexpected from the expected result of 0b000000000000000000000000....11001100;
+    It's the same for every operation, bitset takes care of it but in turn it's slower than manual, which is:
+    std::cout << static_cast<uint8_t>~bits;
+    it's problem for all operations, all of them gets promoted to int before operation even starts, but the problemis only visible for ~ and <<
+So, Avoid bit shifting on integral types smaller than int whenever possible, unless u have to.
+
+o.3
+writing binary is easy in c++14 cuz we have binary literals:
+constexpr std::uint8_t bits {0b111'0000};
+BUT before C++14, binary literals was not here:
+        constexpr std::uint8_t bitts{0x01}; -> do with hexadecimal
+        OR BETTER:
+        constexpr std::uint8_t bitts{1 << 0}; ->0000'0001
+        constexpr std::uint8_t bitts{1 << 1}; ->0000'0010
+        constexpr std::uint8_t bitts{1 << 2}; ->0000'0100
+        constexpr std::uint8_t bitts{1 << 7}; ->1000'0000
+
+[TEST] To determine if a bit is on or off, we use bitwise AND in conjunction with the bit mask for the appropriate bit: 
+        	[[maybe_unused]] constexpr std::uint8_t mask0{ 0b0000'0001 }; // represents bit 0
+          std::uint8_t flags{ 0b0000'0101 }; // 8 bits in size means room for 8 flags
+          std::cout << "bit 0 is " << (static_cast<bool>(flags & mask0) ? "on\n" : "off\n");
+
+[SET] -> turn a bit to 1
+      flags |= mask1; // turn on bit 1
+      flags |= (mask4 | mask5); // turn bits 4 and 5 on at the same time
+[RESET] -> turn to 0
+  
+    [[maybe_unused]] constexpr std::uint8_t mask0{ 0b0000'0001 }; // represents bit 0
+    flags &= ~mask0 //turns off bit 0
+    flags &= ~(mask4 | mask5); // turn bits 4 and 5 off at the same time
+
+    NOTE: compiler can complain about this operation cuz after ~ the mask gets promoted to int and it might ask why we doing unsigned vs signed &= operation
+    so a better way  might be
+    flags &= static_cast<uint8_t>~mask4;
+
+[FLIP] We use xor operation for this
+    [[maybe_unused]] constexpr std::uint8_t mask2{0b0000'0100};
+
+    flag ^= mask2; -> flips the second bit.
+    flags ^= (mask4 | mask5); // flip bits 4 and 5 at the same time
+
+NOTE: We can use these bit operations with bit masks too!

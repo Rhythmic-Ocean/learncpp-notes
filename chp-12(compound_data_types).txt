@@ -1,0 +1,90 @@
+12.1
+-Compound types in C++:
+    Functions
+    C-style Arrays
+    Pointer types:
+        Pointer to object
+        Pointer to function
+    Pointer to member types:
+        Pointer to data member
+        Pointer to member function
+    Reference types:
+        L-value references
+        R-value references
+    Enumerated types:
+        Unscoped enumerations
+        Scoped enumerations
+    Class types:
+        Structs
+        Classes
+        Unions
+  NOTE: this is a compound data type too:
+    void doSomething(int x, double y)
+    {
+
+    }
+    this function's type is void (int, int). And it has a special callable property!
+
+12.2
+  -type of an expression must be determined at compile time but an expression itself can either be evaluated at compile time or runtime
+  -lvalue -> anything that can be later referenced thru an identifier (like variables, functions etc)
+  NOTE: C type strings are lvalue
+  -rvalues are only valid till the end of expression. eg: 2+2; -> only valid in this line, can't be referenced later
+    return from a function is rvalue too
+    static_cast<int>(d) is a rvalue too
+  BASICALLY:
+    -Lvalue expressions evaluate to an identifiable object.
+    -Rvalue expressions evaluate to a value.
+  -operators like binary operator operad+ expect all their operands to be rvalue unless specified otherwise
+  -an lvalue will implicitly convert to rvalue, so lvalue can be used anywhere rvalue is excepted, but the latter's not always true
+    eg:
+      int y {5};
+      int x {y}; -> works, despite we expecting stuff inside {} to be a rvalue
+      int z = y + 2; -> here y is implicitly convered to rvalue and the expression y + 2 is evaluted to be an y expression
+  NOTE: lvalues exist beyond the end of expression, but rvalue's scope end after that. (It just exists as CPU's immediate value)
+  -Stringizing in macro:
+    #define PRINTSM(expr) {(std::cout << #expr << " is something")} -> # just makes whateer is passed to the macro an string.
+    eg:
+      int x = 1;
+      PRINTSM(x);
+      this will output:
+        x is something
+
+12.3 non const lvalue reference
+  -int x {1};
+   int& ref {x};
+
+  NOTE: it's not a pointer, now ref and x just refer to the same int object in memory!!
+   ref++ changes both x and ref;
+   int& -> reference type
+   int -> referenced type
+
+  -reference type MUST be initialized
+    int& ref;-> invalid
+    int& ref{x}; -> valid, ref is now bound to object x, this is called reference initialization and x is also called referent
+  NOTE: non const lvalue reference can only be bound to non const lvalues 
+    int& ref{0}; -> invalid
+    const int x {1}; 
+    int& ref1 {x}; -> invalid, otherwise this will allow us to change x too and will violate const, and can't be bound to void too
+  NOTE: reference type and referenced type MUST match for binding to be succesful (exceptions apply in case of inheritance)
+    eg:
+      int a {1};
+      long& ref {a}; 
+      this is invalid. Because int -> long requries conversions, and conversion, even implict ones just take input and spit out output, so here a will be a long type rvalue, and we
+      can't bind rvalue to refernce type
+  -references can't be reseated
+    eg:
+      int x {5};
+      int& ref {x}; -> initialized
+      int y {6};
+      ref = y; -> will just result in x's value changing from 5 to 6
+  -references and the object they reference have lifetime independent of each other, if object is destoryed before reference is, we r left with dangling reference with undef beh
+  -references are not object, so we can't do reference of reference and use reference in places where objects are explicitly required
+    eg: 
+      int x {};
+      int& ref {x};
+      int& ref2 {ref};
+      here ref2 will still point to x, not ref
+
+12.4 const lvalue reference
+

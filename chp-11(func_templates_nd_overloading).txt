@@ -1,0 +1,466 @@
+11.1
+  -overloading function:
+    int add(int a, int b){
+        return a + b;
+      }
+    double add (double a, double b){
+        return a + b;
+      }
+    add(1,2); -> calls first one
+    add(1.2, 2.2); -> calls second one
+
+11.2
+  -only different number of parameter and types will be valid in determining overloaded function not return type
+  -type aliasing and using them as "different parameters" is not acceptable for overloading
+  -const and non-const qualifers are also not considered:
+      void print(int);
+      void print(const int); // not differentiated from print(int)
+      will result in compiler error
+  -... is acceptable for overload too:
+        oid foo(int x, int y);
+        void foo(int x, ...); // differentiated from foo(int, int)
+
+        Thus a call to foo(4, 5) will match to foo(int, int), not foo(int, ...).
+  #NAME MANGLING:
+      for overloaded functions, compiler performs name mangling i.e each function are given diferent names but it's not standardized. 
+        eg: int fnc() might get fnc_v in assembly and int fnc(int a) might get fnc_i
+
+11.3 overload resolution:
+  -the compiler goes thru a series of sequential steps to resolve overloaded function calls
+  -Steps include:
+    Step 1 looking for exact match
+    Step 1.1 applying a number of trival conversions:
+      Ivalue to rvalue conversions (maybe in next chp)
+      qualification conversion (eg non const to const)
+        void foo(const int x){
+
+          }
+        int x = 7;
+        foo(x); -> non const to const
+
+      non reference to reference conversions
+        void foo(const int x&){
+
+          }
+        int x = 7;
+        foo(x); -> non const to const and non ref to ref
+      ##NOTE: match made thru trival conversions are considered to be exact match so:
+        void foo(const int x);
+        void foo(const int x&);
+        this will create a compile time error
+
+    Step 2 if no match found by this point numerical promotions are done to find match
+      float -> double, bool -> int etc...
+    Step 3 still not? numerical conversions. NOTE numerical promotions take precedence
+      int -> double, char -> double, int -> long etc...
+    Step 4 compiler tires finding by user defined conversions (maybe in one of the future chps)
+    Step 5, if still nothing by this point, the compiler tries finding thru elipses (...)
+    Step 6, if still nothing the compiler gives in and throws error
+
+  #Ambigious Match:
+  -for normal function if compiler can't find the corresponding fnc it's functin not found error but for overloading function when compiler finds that it can user 2 or more function
+    definition for same call, it will issue an Ambigious Match error.
+    eg:
+    float add(int a){
+
+      }
+    float add(double a){
+
+      }
+    add(5L);
+
+    5L (long type) can either be convereted to double or int by numerical conversion, if it was char, numerical promotion to int will take precedence, but here since there's 2  
+    promotions on the same step, the compiler will trow error
+
+11.4 deleting functions:
+
+  #include <iostream>
+
+  void printInt(int x)
+  {
+      std::cout << x << '\n';
+  }
+
+  void printInt(char) = delete; // calls to this function will halt compilation
+  void printInt(bool) = delete; // calls to this function will halt compilation
+
+  int main()
+  {
+      printInt(97);   // okay
+
+      printInt('a');  // compile error: function deleted
+      printInt(true); // compile error: function deleted
+
+      printInt(5.0);  // compile error: ambiguous match
+
+      return 0;
+  }
+
+  We can also delete enmass, so only one definition is valid:
+  #include <iostream>
+
+  // This function will take precedence for arguments of type int
+  void printInt(int x)
+  {
+      std::cout << x << '\n';
+  }
+
+  // This function template will take precedence for arguments of other types
+  // Since this function template is deleted, calls to it will halt compilation
+  template <typename T>
+  void printInt(T x) = delete;
+
+  int main()
+  {
+      printInt(97);   // okay
+      printInt('a');  // compile error
+      printInt(true); // compile error
+
+      return 0;
+  }
+
+11.5 Default arguments
+  -Must be on rightmost side of parameters
+  -If multiple default args, cannot have anything non default on the right of first default, should be all default
+  -CANNOT be redeclared
+    eg: if it's already declared in forward declaration, can't be decleared in definition too:
+      #include <iostream>
+      void print(int x, int y=4); // forward declaration
+
+      void print(int x, int y=4) // compile error: redefinition of default argument
+      {
+          std::cout << "x: " << x << '\n';
+          std::cout << "y: " << y << '\n';
+      }
+
+    so if it has forward declaration, best do it there. If not do it in definition
+  -can use overload:
+    #include <iostream>
+    #include <string_view>
+
+      void print(std::string_view s)
+      {
+          std::cout << s << '\n';
+      }
+
+      void print(char c = ' ')
+      {
+          std::cout << c << '\n';
+      }
+
+      int main()
+      {
+          print("Hello, world"); // resolves to print(std::string_view)
+          print('a');            // resolves to print(char)
+          print();               // resolves to print(char)
+
+          return 0;
+      }
+
+  -can easily lead to ambigious calls:
+      void foo(int x = 0)
+      {
+      }
+
+      void foo(double d = 0.0)
+      {
+      }
+
+      int main()
+      {
+          foo(); // ambiguous function call
+
+          return 0;
+      }
+11.6 template intro
+
+  template <typename T>
+  T max(T a, T b){
+      return (a < b)?a:b;
+  }
+
+11.7 template instantiation:
+
+  #include <iostream>
+
+  template <typename T>
+  T max (T a, T b){ -> called primary template
+      return (a < b) ? a : b;
+  }
+
+  max<int>(1, 2); -> instantiates and calls max<int>
+  max<int>(4, 3); -> calls the already instantiated function
+  std::cout << max<double>(1, 2) << '\n'; // instantiates and calls function max<double>(double, double)
+
+  This iscompiled to (by the compiler):
+  #include <iostream>
+
+  // a declaration for our function template (we don't need the definition any more)
+  template <typename T>
+  T max(T x, T y);
+
+  template<>
+  int max<int>(int x, int y) // the generated function max<int>(int, int)
+  {
+      return (x < y) ? y : x;
+  }
+
+  template<>
+  double max<double>(double x, double y) // the generated function max<double>(double, double)
+  {
+      return (x < y) ? y : x;
+  }
+
+  int main()
+  {
+      std::cout << max<int>(1, 2) << '\n';    // instantiates and calls function max<int>(int, int)
+      std::cout << max<int>(4, 3) << '\n';    // calls already instantiated function max<int>(int, int)
+      std::cout << max<double>(1, 2) << '\n'; // instantiates and calls function max<double>(double, double)
+
+      return 0;
+  }
+  #type deduction for template functions:
+  we can call max in above example as:
+    max<>(4,3); and the compiler will automaically deduce the template type to be int
+    we can also do:
+    max (4,3); 
+    But if we have a non template deinition of max then that would be preferred by max(4.3)
+
+  #template functions can fail to compiler smtimes:
+  #include <iostream>
+  #include <string>
+
+  template <typename T>
+  T addOne(T x)
+  {
+      return x + 1;
+  }
+
+  int main()
+  {
+      std::string hello { "Hello, world!" };
+      std::cout << addOne(hello) << '\n';
+
+      return 0;
+  }
+
+  Here x + 1, does not make sense when x is std::string type
+
+NOTE: this:
+    #include <iostream>
+
+  template <typename T>
+  T addOne(T x)
+  {
+      return x + 1;
+  }
+
+  int main()
+  {
+      std::cout << addOne("Hello, world!") << '\n';
+
+      return 0;
+  }
+  is somehow valid and prints "ello, world!".
+
+  #disallow templating for certain types:
+
+  template <typename T>
+  T add1 (T a){
+      return a + 1;
+  }
+
+  template<>
+  const char* add1(const char* a) = delete;
+
+ #default args are valid for template fncs too:
+
+  template <typename T>
+  T add1 (T a, int p = 3){
+      return a + 1;
+  }
+
+NOTE: BE AWARE OF TEMPLATE FUNCTIONS THAT USE STATIC VAIRABLES!!!! (SEE THE ACTUAL DOCS FOR THIS PLSS)
+
+11.8 multiple parameters on template:
+  #include <iostream>
+
+  template<typename T, typename U>
+  auto max <T x, U y> -> std::common_type_t<T,U>
+  {
+      return (x < y) ? x : y; 
+  }
+
+ #abbreviated function template (C++ 20)
+  auto max(auto x, auto y){
+      return (x < y) ? x : y; 
+    }
+  is same as the function we wrote above except the return trail
+
+ #overloading function templates
+
+ template <typename T>
+ T max(T x ){
+
+  }
+ template <typename T, typename U>
+ T max(T x, U y ){
+  
+  }
+ template <typename T, typename U, typename Z>
+ T max(T x, U y , Z z ){
+  
+  }
+
+  max(1.1); 
+  max(1,1, 1);
+  max(1.1, 1, 1u);
+  NOTE: if u have two primary template functions overloaded with same number of types:
+
+  template<typename T>
+  T max(T x, T y){
+
+  }
+
+  template<typename T, typename U>
+  T max(T x, U y){
+      
+  }
+  on calling
+  max(1.1, 1.1); first one will be called
+  max(1, 1,1); second one will be called
+
+11.9 non type template parameters
+  -used to pass contexpr parameters to function so that it can be evaluated at compile time
+  NOTE: as of C++20 u can't pass constexpr parameters
+
+  template <int N>
+  print(){
+    static_assert(N >=0 && "template parameter should be positive or zero")
+    std::cout <<  std::sqrt(N);
+  }
+  This allows compile time evalation of function parameter like in static assert
+  can be called as:
+  print<-5>();
+  NOTE:std::bitset<8> bit{000111}; -> example of non type tempalte
+
+ #implicit conversions for non type template arguments
+  template<int N>
+  for a function with above template u can pass certain types of args that would be valid. The conversions are as follows:
+    -integral promotion
+    -integral conversions
+    -user defined conversions
+    -lvalue to rvalue
+  NOTE: if templates are overloaded, the algorithm for calling function template from function template call is not very good, so it can easily lead ambiguous errors
+  eg:
+  if u have a functions and u template overloaded with int and char
+    template<int a>
+    void print(){
+      std::cout << a;
+    }
+    template<char c>
+    void print(){
+      std::cout << c;
+    }
+    print<'c'>();-> will result in ambiguous error
+
+  C++17 FEATURE: type deduction for non type templates parameters
+  template<auto x>
+  void print(){
+    std::cout << x;
+  }
+  print<5>();-> WORKS!!
+  print<'c'>() -> works too!!
+
+  it's  because after compilation the program will look smthing like this:
+  #include <iostream>
+
+  template <auto N>
+  void print()
+  {
+      std::cout << N << '\n';
+  }
+
+  template <>
+  void print<5>() // note that this is print<5> and not print<int>
+  {
+      std::cout << 5 << '\n';
+  }
+
+  template <>
+  void print<'c'>() // note that this is print<`c`> and not print<char>
+  {
+      std::cout << 'c' << '\n';
+  }
+
+  int main()
+  {
+      print<5>();   // calls print<5>
+      print<'c'>(); // calls print<'c'>
+
+      return 0;
+  }
+
+NOTE: this:
+  template <typename T>
+  int count(T) // This is the same as int count(T x), except we're not giving the parameter a name since we don't use the parameter
+  {
+      static int c { 0 };
+      return ++c;
+  }
+
+  is valid if u r not using the argument passed
+
+NOTE: this:
+template <typename T>
+int count(T) // This is the same as int count(T x), except we're not giving the parameter a name since we don't use the parameter
+{
+    static int c { 0 };
+    return ++c;
+}
+
+int main()
+{
+    std::cout << count(1) << '\n';
+    std::cout << count(1) << '\n';
+    std::cout << count(2.3) << '\n';
+    std::cout << count<double>(1) << '\n';
+
+    return 0;
+}
+
+specifically cout<double>(1) is is used to call the double version from that function template
+
+NOTE:
+  #include <iostream>
+
+  int foo(int n)
+  {
+      return n + 10;
+  }
+
+  template <typename T>
+  int foo(T n)
+  {
+      return n;
+  }
+
+  int main()
+  {
+      std::cout << foo(1) << '\n'; // #1
+
+      short s { 2 };
+      std::cout << foo(s) << '\n'; // #2
+
+      std::cout << foo<int>(4) << '\n'; // #3
+
+      std::cout << foo<int>(s) << '\n'; // #4
+
+      std::cout << foo<>(6) << '\n'; // #5
+
+      return 0;
+  }
+  Here for foo(s) the non template function is preferred as it's just a integral pormotion away despite not being an exact match
+
+NOTE: template initiated functions are inline by default so have them in .h fild and #include wherever needed
+
