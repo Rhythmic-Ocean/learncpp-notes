@@ -1,0 +1,817 @@
+13.1
+  -Structs:
+    struct F{
+        int a{};
+        int b{};
+    };
+    int main(){
+      F f = {3, 4};
+    }
+  -Type definitions like struct are paritally extempt from ODR rules. We can have it in multiple program files with the header
+  -User defined types: class types or enumuared defined by stl, implemention or theird party(std::string would be here too but not int)
+  -Program defined types: class types or enumuration defined by thrid party (us)
+  -COmpound types: derived from fundamental type (std::string)
+
+13.2
+  -Unscoped Enumerations:
+    enum Color{
+      red,
+      green,
+      blue,
+      color_yellow, //better way
+    }
+    enum Feeling{
+      heppy,
+      green,//will cause error due to naming collision
+      yellow,
+    }
+
+    namespace Shapes{
+      enum Shapes{
+        round,
+        flat,
+        square,
+      } 
+    }
+
+    namespace Sound{
+      enum Sound{
+        loud,
+        gong,
+        flat,
+      }
+    }
+
+
+    int main{
+      Color my_house {red};
+      Color my_shirt{Color::red};
+      Shapes::Shapes my_cup {Shapes.flat}; //better to avoid name collision
+      Sound::Sound my_gong{Sound::flat};
+    }
+
+    Can be used for bit manipulations too:
+      #include<bitset>
+      namespace Flags
+      {
+          enum State
+          {
+              isHungry,
+              isSad,
+              isMad,
+              isHappy,
+              isLaughing,
+              isAsleep,
+              isDead,
+              isCrying,
+          };
+      }
+
+      int main()
+      {
+          std::bitset<8> me{};
+          me.set(Flags::isHappy);
+          me.set(Flags::isLaughing);
+
+          std::cout << std::boolalpha; // print bool as true/false
+
+          // Query a few states (we use the any() function to see if any bits remain set)
+          std::cout << "I am happy? " << me.test(Flags::isHappy) << '\n';
+          std::cout << "I am laughing? " << me.test(Flags::isLaughing) << '\n';
+
+          return 0;
+      }
+
+13.3 Unscoped enumurator integral conversion:
+  -enum Animal{
+      cat, //automatically 0
+      dog, //1
+      elephant, //2
+    };
+  -Can be assigned by ourselves too, but if consecutive values are left unassigned, then the integral value is automatically incremented
+    enum Animal{
+        cat = -2,  
+        dog, //-1
+        elephant, //0
+      };
+  -We can also give 2 enum values the same names, but that would make the two of them identical:
+    enum Animal{
+        cat = -2, 
+        dog = -2, //now cat and dog are identical
+        elephant, //0
+    };
+  -enums can be value 0 initialized:
+    -Animal my_pet {}; -> will default to cat if it's 0,will just be 0 if nothing else
+    -so best to have 0 as default value like:
+      enum Animal{
+        unknown_pet,
+        cat,
+        dog,
+      };
+      now Animal my_pet{}; will initialize to unknown_pet
+  -Unscoped enums are implicitly converted to integral type:
+      Animal my_pet {};
+        std::cout << my_pet; -> prints 0, does not matter if there was a zero equivalent value in the original enum unless I/O operator(operator<< here) is overloaded here
+      -but enum is still a compound type!
+  -Underlying int type of enums: it's implementation defined, but you can specify it:
+    enum Color : std::int8_t{
+      cat,
+      dog,
+      elephat,
+    };
+    NOTE: uint8_t and int8_t are underlying types of char so putting that as enum's underlying type can make it print chars when u do stuff
+          Best to just not do anything.
+  
+  -Integer type's not implicitly converted to enums(UNLESS YOU ARE IN C++17 AND THE UNDERLYING TYPE OF THE ENUM IS CLARELY DEFINED!!):
+    enum Color : std::int8_t{
+      cat,
+      dog,
+      elephat,
+    };
+    Color my_pet {2}; -> compile time error
+    my_pet = 2; -> WARNING: initialiing with = won't work too
+
+    -use static_cast if u really need this:
+      Color my_pet {static_cast<Color>(2)};
+      NOTE: static_casting an int that's outside the range of the given enum's underlying type is UB
+  NOTE: integers can be the only underlying type for enums!
+  NOTE: Enums are constexpr quantified by default
+  NOTE: An enum's value can be initialized by other enums eg:
+      enum Animal{
+        cat;
+        dog = cat;
+      };//tho not recommended
+      
+13.4
+  Converting enums to and from string:
+    enum to string
+      enum Color{
+        none,
+        red,
+        blue,
+        green,
+      };
+      
+      constexpr std::string_view StringFromEnum (Color c){
+        switch(c){
+          case red:
+            return "red";
+          case blue:
+            return "blue";
+          case green:
+            return "green";
+          default:
+            return "???";
+        }
+      }
+
+      int main(){
+      Color color {};
+      std::cin >> color;//1, 2, 3 are the only valid choices, 0 would mean none and thus ??? and any other number is also ???
+      std::cout >> StringFromEnum(color);
+      return 0;
+      }
+
+    string to enum
+      enum Color{
+        none,
+        red,
+        blue,
+        green,
+      };
+      
+      constexpr std::optional<Color> EnumFromString (std::string_view ssv){
+        if(ssv == "red") return red;
+        if(ssv == "blue") return blue;
+        if(ssv=="green") return green;
+        return {};
+      }
+
+      int main(){
+      std::string s {};
+      std::cin >> s;//1, 2, 3 are the only valid choices, 0 would mean none and thus ??? and any other number is also ???
+      Color color = EnumFromString(s);
+      if(!color) std::cout<<"INvalid";
+      std::cout<<color<<" is the number.";
+      return 0;
+      }
+    
+    DOING LOWER CASE IN C++ (KINDA FUCKED UP):
+        std::string toASCIILowerCase(std::string_view sv)
+        {
+            std::string lower{};
+            std::transform(sv.begin(), sv.end(), std::back_inserter(lower),
+                [](char c)
+                {
+                    return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                });
+            return lower;
+        }
+
+13.5
+  I/O overloading:
+    -when we do std::cout<<5<<"me";, operator << has been overloaded for std::ostream (which is like patent type of std::cout) and int/ string to print and return std::cout back
+        So, std::cout<<5, prints 5 to console and returns std::cout and std::cout<<"me" will print "me" and return std::cout again!
+    -we can do something similar as above and overload std::cout and our custom enum type for operator<<
+      eg:
+      enum Color{
+        none, 
+        red,
+        blue,
+        green,
+      }
+
+      constexpr std::string_view StringFromEnum (Color c){
+        switch(c){
+          case red:
+            return "red";
+          case blue:
+            return "blue";
+          case green:
+            return "green";
+          default:
+            return "???";
+        }
+      }
+
+      constexpr std::optional<Color> EnumFromString (std::string_view ssv){
+        if(ssv == "red") return red;
+        if(ssv == "blue") return blue;
+        if(ssv=="green") return green;
+        return {};
+      }
+
+      std::ostream& operator<<(std::ostream& out, Color color){
+        out << StringFromEnum(color);
+        return out;
+      }
+
+      std::istream& operator>>(std::istream& in, Color& color){
+        std::string str{};
+        in >> str;
+        std::optional<Color> match {EnumFromString(color)};
+        if(match){
+          color = *match;
+          return in;
+        }
+        in.setstate(std::ios_base::failbit);
+        return in;
+      }
+
+      int main(){
+        Color color {red};
+        std::cout << red;
+        Color colour {};
+        std::cin >> color;
+        if(std::cin) std::cout << "You choose" <<  color;
+        else{
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input";
+          }
+        return 0;
+      }
+
+13.6
+  Scoped Enums:
+    -unscoped enums are NOT type safe:
+      enum Color{
+        red,
+        green,
+        blue,
+      }
+      enum Pet{
+        pig,
+        dog,
+        cat,
+      }
+
+      int main(){
+        int a = red + dog; //works as Color implicitly converts to int
+        if(green == dog){ //it's a success
+        }
+      }
+      that's why we have scoped enums
+    -defined using enum class, almost like enum inside a namespace except type safety stuff. Unscoped enums even inside namespace are not type safe
+      enum class is type safe
+      enum class Color{
+        red,
+        green,
+        blue,
+      }
+      enum class Pet{
+        pig,
+        dog,
+        cat,
+      }
+      int main(){
+        int a = Color::red + Pet::dog; //illegal, pet and color are 2 different types, do static_cast<> to int to make it work
+        Color color {red};
+        std::cout << color; //error, no overload for color and implicit conversion does not occur
+        std::cout << static_cast<int> color;
+        //OR IN C++23 do:
+        std::cout << std::to_underlying(color);//will convert color to it's underlying int type
+      }
+  NOTE: LEGAL IN C++17 FOR SOME REASON:
+    Pet p {1}; -->only for scoped enums, not for unscoped ones...
+
+  -Easier way to convert enums to int:
+    enum class Color{
+      red,
+      green,
+      blue,
+    }
+
+    template <typename T>
+    constexpr auto operator+<T a>{
+      return static_cast<std::underlying_type<T>>(a);
+    }
+    
+    int main(){
+      std::cout << +Color::red;
+    }
+
+  -using enum (C++20):
+    enum class Color{
+      red,
+      green,
+      blue,
+    }
+
+    template <typename T>
+    constexpr auto operator+<T a>{
+      return static_cast<std::underlying_type<T>>(a);
+    }
+    
+    int main(){
+      using enum Color; //c++20
+      std::cout << red;
+    }
+
+13.7
+  -struct Emp{
+    std::string name {};
+    int id  {};
+    int age {};
+    double salary {};
+  };
+
+  int main(){
+    Emp joe {}; //default zero initialization for all it's members, Emp joe; would also work here
+    joe.id = 111;
+    joe.name = "joe";
+    joe.age = 19;
+  }
+
+  -struct Emp{
+    std::string name ;
+    int id;
+    int age;
+    double salary;
+  };
+
+  int main(){
+    Emp joe;// unitialized!
+    joe.id = 111;
+    joe.name = "joe";
+    joe.age = 19;
+    joe.salary = 11111.0;
+  }
+  
+  -Aggregrate type: any type that can contain multiple data types. Array, structs, class, unions etc. But in c++ aggregrates are class type or c style array with:
+        -no user defined constructors
+        -no private or portected non static data members
+        -no virtual functions
+  -We can "aggregrate initialize" a struct with list initialization:
+    -struct Emp{
+      std::string name ;
+      int id;
+      int age;
+    }
+    Emp joe {111, "joe", 19}; --> preferred!!
+    OR copy list initialization 
+    Emp joe = {111, "joe", 19}; 
+  -initializing with parameters less than member count:
+    -struct Emp{
+      std::string name ;
+      int id;
+      int age;
+    }
+    Emp joe  {111, "joe"}; -> works, id will be 111, name will be joe and age will be 0
+    SO,
+    Emp joe {}; -> will initialize id = 0, name  = "", age = 0
+  Default values:
+    -struct Emp{
+      std::string name ;
+      int id;
+      int age;
+      double salary = 111.11;
+    };
+
+    Emp joe {1, "joe"};, everything like above and joe.salary will be default initilized to 111.11
+
+  -Overloading << for structs:
+    #include <iostream>
+
+    struct Employee
+    {
+        int id {};
+        int age {};
+        double wage {};
+    };
+
+    std::ostream& operator<<(std::ostream& out, const Employee& e)
+    {
+        out << "id: " << e.id << " age: " << e.age << " wage: " << e.wage;
+        return out;
+    }
+
+    int main()
+    {
+        Employee joe { 2, 28 }; // joe.wage will be value-initialized to 0.0
+        std::cout << joe << '\n';
+
+        return 0;
+    }
+  -variables of a struct can be const or constexpr
+    constexpr Employee joe {2, 28, 1.11};
+  C++20 and forward we can intialize variable with their member names:
+    Employee joe {.id = 11, .wage = 11.11}; -> age will be zero intialized
+  -we can initialize struct with another struct
+    Employee marry = joe; -> not aggregrate initialize like previous but initializes all values. 
+    NOTE: struct memebers are stored in stack/ reigster, so when u initialie a struct with another all values in stack are compied (like primitive types and addresses for strings/ 
+        or other objects)
+
+13.9
+  -at least not zero initializing members of struct when defining them is bad!
+  -explicit values used during struct intiialization takes precedence over default ones used
+      struct Something
+      {
+          int x;       // no default initialization value (bad)
+          int y {};    // value-initialized by default
+          int z { 2 }; // explicit default value
+      };
+
+      int main()
+      {
+          Something s1;             // No initializer list: s1.x is uninitialized, s1.y and s1.z use defaults
+          Something s2 { 5, 6, 7 }; // Explicit initializers: s2.x, s2.y, and s2.z use explicit values (no default values are used)
+          Something s3 {};          // Missing initializers: s3.x is value initialized, s3.y and s3.z use defaults
+
+          return 0;
+      }
+  -Provide a default value for all members. This ensures that your members will be initialized even if the variable definition doesn’t include an initializer list.
+    Fraction f1;          
+    Fraction f2 {}; -> better
+
+13.10
+  -passing by reference
+      int pass_me(const Employee& emp){
+        std::cout << emp.id << " " << emp.age << " " <<  emp. wage;
+      }
+    -passing temporary structs:
+      pass_me(Employee{1, 30, 50000});
+      OR
+      pass_me({1, 30, 50000}); --> worse choice, but this implicity converts to Employee type. However can result in ambgious errors if there's some other structs with similar 
+        members
+    -returing remporary structs:
+      Employee pass_me(const Employee& emp){
+        std::cout << emp.id << " " << emp.age << " " <<  emp. wage;
+        return Employee{emp.id + 1, emp.age + 2, emp.wage + 1000};
+      }
+        OR, we can have compiler deduce the type too:
+          return {};
+
+13.11
+  -nested structs:
+    #include <iostream>
+
+    struct Employee
+    {
+        int id {};
+        int age {};
+        double wage {};
+    };
+
+    struct Company
+    {
+        int numberOfEmployees {};
+        Employee CEO {}; // Employee is a struct within the Company struct
+    };
+
+    int main()
+    {
+        Company myCompany{ 7, { 1, 32, 55000.0 } }; // Nested initialization list to initialize Employee
+        std::cout << myCompany.CEO.wage << '\n'; // print the CEO's wage
+
+        return 0;
+    }
+  
+  -OR we can define struct within another struct too:
+    #include <iostream>
+
+    struct Company
+    {
+        struct Employee // accessed via Company::Employee
+        {
+            int id{};
+            int age{};
+            double wage{};
+        };
+
+        int numberOfEmployees{};
+        Employee CEO{}; // Employee is a struct within the Company struct
+    };
+
+    int main()
+    {
+        Company myCompany{ 7, { 1, 32, 55000.0 } }; // Nested initialization list to initialize Employee
+        std::cout << myCompany.CEO.wage << '\n'; // print the CEO's wage
+
+        return 0;
+    }
+  -For structs that's a owner, always have it's memebrs to be of owner type instead of viewr types (references, string_viewer, pointers etc).
+  -Due to padding the size of structs can be different than just the net sum of it's members sizes
+
+13.12
+  -reference of a struct can use (.) operator, same as the original struct to access it's members
+  -pointers to a struct should use (->) arrow operator to access memebers
+  -mixing -> and .
+    #include <iostream>
+    #include <string>
+
+    struct Paw
+    {
+        int claws{};
+    };
+
+    struct Animal
+    {
+        std::string name{};
+        Paw paw{};
+    };
+
+    int main()
+    {
+        Animal puma{ "Puma", { 5 } };
+
+        Animal* ptr{ &puma };
+
+        // ptr is a pointer, use ->
+        // paw is not a pointer, use .
+
+        std::cout << (ptr->paw).claws << '\n';
+
+        return 0;
+    }
+
+13.13
+  Class Template:
+   NOTE: you can't overload structs like overloading functions:
+        struct Pair{
+            int x;
+        };
+        struct Pair{ //compiler error!!
+            double x;
+        };
+  -so for situation like this, use class templates;
+    template <typename T>
+    struct Pair{
+      T x {};
+      T y {}:
+    }
+
+    Pair<int> {1 , 2};
+    Pair<double> {1.1, 2.2};
+  -we can pass it to a function too:
+    template <typename T>
+    struct Pair{
+      T x {};
+      T y {}:
+    }
+    template <typename T>
+    T returns (Pair<T> p){
+    }
+  -multiple template types:
+    template <typename T, typename U>
+    struct Pair{
+      T x {};
+      U y {}:
+    }
+    template <typename T, typename U>
+    T returns (Pair <T,U> p){
+      returns...;
+    }
+  -Or you can just amekt he function like this:
+    template <typename T>
+    int returns (T p){ //will accept any type, but unless u have to the above is better as u can have some constraints
+      returns...;
+    }
+    Example of this:
+      #include <iostream>
+
+    template <typename T, typename U>
+    struct Pair
+    {
+        T first{};
+        U second{};
+    };
+
+    struct Point
+    {
+        int first{};
+        int second{};
+    };
+
+    template <typename T>
+    void print(T p) // type template parameter will match anything
+    {
+        std::cout << '[' << p.first << ", " << p.second << ']'; // will only compile if type has first and second members
+    }
+
+    int main()
+    {
+        Pair<double, int> p1{ 4.5, 6 };
+        print(p1); // matches print(Pair<double, int>)
+
+        std::cout << '\n';
+
+        Point p2 { 7, 8 };
+        print(p2); // matches print(Point)
+
+        std::cout << '\n';
+
+        return 0;
+    }
+  -A fucked up case:
+    template <typename T, typename U>
+    struct Pair // defines a class type named Pair
+    {
+        T first{};
+        U second{};
+    };
+
+    template <typename Pair> // defines a type template parameter named Pair (shadows Pair class type)
+    void print(Pair p)       // this refers to template parameter Pair, not class type Pair
+    {
+        std::cout << '[' << p.first << ", " << p.second << ']';
+    }
+    Shaowing struct name with template type name, so better to stick with simplate names like N, U, T for template typename
+
+  -std::pair (built in to <utility> for storing 2 data types in one)
+
+    std::pair<int, int> num {1, 2};
+    std::pair<std::string, int> joe {"joe", 2};
+
+  NOTE: Function templates are implicitly inline!
+  NOTE: S1tructs and class templtets are odr extempt too as long as their definition is same across all files.
+  NOTE: Strict ODR, where only one definition is required for the entire folder is only for:
+    -non inline functions and globals variables
+    -static class memebers
+  -Given aboven notes, if we wanna have class template structs in multiple files, we gotta have it in header and put that header in multiple files
+    pair.h
+      template<typename T>
+      struct Pair{
+        T a{};
+        T b{};
+      }
+    //and just have it in other fils and use it
+    #include "pair.h"
+    #include <iostream>
+
+    void foo()
+    {
+        Pair<int> p1{ 1, 2 };
+        std::cout << max(p1) << " is larger\n";
+    }
+
+13.14
+  NOTE: Aggregrate in Cpp are just simple structs/ class that can be initialize with simple list initization without need of constructors calling
+        std::pair does function call with {} so it's not an aggregrate
+  C++17: Class Template Argument Deduction (CATD):
+    #include <utility>
+    int main(){
+      std::pair<int, int> p  {1, 2}; 
+      std::pair p{1, 2}; -> legal! Compiler automatically deduces the type
+    }
+    
+    BUT
+    int main(){
+      Pair<int, int> p {1, 2}; 
+      Pair pp{1, 2}; -> illegal in C++17, legal in c++20 and above
+    } // CATD can't deduce template type for aggregrate types in c++ 17 for that we need template argument deduction guide
+
+    template <typename T, typename U>
+    struct Pair{
+      T first{};
+      T sec{};
+    }
+
+    template <typename T, typename U>
+    Pair(T, U) -> Pair<T, U>
+
+    int main(){
+      Pair<int, int> p {1, 2}; 
+      Pair pp{1, 2}; -> legal in C++17
+    } 
+
+  ANother example:
+    template <typename T>
+    struct Pair
+    {
+        T first{};
+        T second{};
+    };
+
+    // Here's a deduction guide for our Pair (needed in C++17 only)
+    // Pair objects initialized with arguments of type T and T should deduce to Pair<T>
+    template <typename T>
+    Pair(T, T) -> Pair<T>;
+
+  NOTE: Non-aggregates don’t need deduction guides in C++17 because the presence of a constructor serves the same purpose!!
+  NOTE (for non type template argument from prev chap) template<int N> void foo() generates a unique function for every distinct value of N!!
+  -Type templates can have default value (both for function and classes):
+    template <typename T = int, typename U = double>
+    struct ooo{
+      T a {};
+      U b {};
+    };
+
+    template<typename T, typename U>
+    ooo(T, U) -> ooo<T, U>
+
+    int main(){
+      ooo m {1, 2}; -> here CATD will override whatever's in default so it will be ooo<int, int>
+      ooo p; -> here p will be of type ooo<int, double>
+     }
+
+  -Non static member intialization:
+    is initializing class/ struct members inside the class/struct definition:
+      struct me{
+        int a {1};
+        int b {2};
+      }
+  -Using CATD inside non static member initalization is illegal:
+    struct ma{
+      std::pair {1, 2}; -> illegal!
+    }
+    likewise type deduction of any other kind like auto is also illegal, just use template for classes if u need multiple typs for it:
+    struct ma{
+      auto a {1}; -> illegal!
+    }
+  -CATD as function parameters is also illegal (ok as function parameters tho):
+      #include <iostream>
+      #include <utility>
+
+      void print(std::pair p) // compile error, CTAD can't be used here
+      {
+          std::cout << p.first << ' ' << p.second << '\n';
+      }
+
+      int main()
+      {
+          std::pair p { 1, 2 }; // p deduced to std::pair<int, int>
+          print(p);
+
+          return 0;
+      }
+  -Use templates in such cases:
+    #include <iostream>
+    #include <utility>
+
+    template <typename T, typename U>
+    void print(std::pair<T, U> p)
+    {
+        std::cout << p.first << ' ' << p.second << '\n';
+    }
+
+    int main()
+    {
+        std::pair p { 1, 2 }; // p deduced to std::pair<int, int>
+        print(p);
+
+        return 0;
+    }
+
+13.15:
+  Aliasing templates:
+    template <typename T>
+    struct Pair{
+      T a{};
+      T b{};
+    };
+    using Point = Pair<int>;
+
+    template <typename T> -> can only be done in global namespace
+    using Coord = Pair<T>;
+
+  NOTE: ALL TEMPLATES CAN ONLY BE DEFINED IN GLOBAL NAMESPACE
+  NOTE: Unscoped enumuration has it's enumurator names in global namespace
+
+
+
+
+            
+            
+                        
+

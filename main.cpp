@@ -1,18 +1,39 @@
+#include <cassert>
+#include <cstddef>
 #include <iostream>
 
-template <int N> // int non-type template parameter
-void print() {
-  std::cout << N << '\n';
-}
+class IntArray {
+private:
+  int *m_array{};
+  int m_length{};
 
-template <char N> // char non-type template parameter
-void print() {
-  std::cout << N << '\n';
-}
+public:
+  IntArray(int length) // constructor
+  {
+    assert(length > 0);
+
+    m_array = new int[static_cast<std::size_t>(length)]{};
+    m_length = length;
+  }
+
+  ~IntArray() // destructor
+  {
+    // Dynamically delete the array we allocated earlier
+    delete[] m_array;
+  }
+
+  void setValue(int index, int value) { m_array[index] = value; }
+  int getValue(int index) { return m_array[index]; }
+
+  int getLength() { return m_length; }
+};
 
 int main() {
-  print<5>();   // ambiguous match with int N = 5 and char N = 5
-  print<'c'>(); // ambiguous match with int N = 99 and char N = 'c'
+  IntArray ar(10); // allocate 10 integers
+  for (int count{0}; count < ar.getLength(); ++count)
+    ar.setValue(count, count + 1);
+
+  std::cout << "The value of element 5 is: " << ar.getValue(5) << '\n';
 
   return 0;
-}
+} // ar is destroyed here, so the ~IntArray() destructor function is called here

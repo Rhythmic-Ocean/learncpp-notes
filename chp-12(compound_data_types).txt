@@ -87,4 +87,370 @@
       here ref2 will still point to x, not ref
 
 12.4 const lvalue reference
+  -const int x {3};
+  const int& ref {x};-> this works, we can only access x, can't modify
 
+  int x {3};
+  const int& ref {x}; -> works too, just can't modify x. read only thru this reference
+  NOTE: priotize lvalue reference by const over by non const unless u wanna have to modify it thru reference
+  -can initialize thru rvalue too:
+    cont int& ref {0};
+  -can be initialized with different type too as long as that type can be implicitly converted to required type:
+    char c {'a'};
+    cont int& ref {c}; -> works cuz rvalue initialization is legal. Also now ref is now bound to a new object with int value 65, not the char 'c'. 
+  WARNING: in above example the reference no longer references to the object it's being "initialized" with!
+
+  -when const reference types are bound directly to temp objects (rvalue), their lifetime is extended to be as long as the reference in question
+    NOTE: NOT APPLICABLE FOR RETURN VALUES FROM FUNCTION
+
+  NOTE: constexpr lvalue references can only be bound to static local or global vars. Cuz compiler can determine their addresses at compile time, but for local variables, it's not 
+        fixed until the function is called at runtime
+
+12.5 passing non const lvalue ref:
+  same as passing by reference in c#, nothing much different
+  eg:
+    void print(std::string& str){
+      std::cout << str;
+    }
+
+    int main(){
+      std::string a {"Hello"};
+      print(a); -> passed by reference and copy creation of expensive string is avoided!
+    }
+
+12.6 passing const lvalue ref:
+  -prefer this over last one unless u wanna have ur function modify ur input.
+  -prefer passing by const reference for class types, and pass by value for fundamental ones cuz copying is really cheap, and std::string_view (or any view) or spans etf
+  -Here’s a partial list of other interesting cases:
+
+      The following are often passed by value (because it is more efficient):
+
+          Enumerated types (unscoped and scoped enumerations).
+          Views and spans (e.g. std::string_view, std::span).
+          Types that mimic references or (non-owning) pointers (e.g. iterators, std::reference_wrapper).
+          Cheap-to-copy class types that have value semantics (e.g. std::pair with elements of fundamental types, std::optional, std::expected).
+
+      Pass by reference should be used for the following:
+
+          Arguments that need to be modified by the function.
+          Types that aren’t copyable (such as std::ostream).
+          Types where copying has ownership implications that we want to avoid (e.g. std::unique_ptr, std::shared_ptr).
+          Types that have virtual functions or are likely to be inherited from (due to object slicing concerns, covered in lesson 25.9 -- Object slicing).
+  -cost of binding a reference to a referent is about the same as copying a fundamental type
+  WARNING: Why not pass everything by reference?:
+            -when passed by reference, the cpu is forced to put the value in ram, so for fundamental data types it's a bit waste since register processing is much much faster
+            -it can cuz type aliasing (multiple pointers for same object) which can block some aggressive optimizations that the cpu could use
+  -An obj of type T is cheap to copy if, sizeof(T) <= 2*sizeof(void *);
+  NOTE: std::string_view in most cases is better than std::string& for following reasons:
+    if it's c style string literal u wanna pass by reference, doing std::string& will first make an expensive copy of that literal of type std::string and then do reference.
+    if it's std::string then it's good
+    if it's std::view, it's goona first be expensive std::string copy and then std::string&
+    
+    BUT for std::string_view, in all cases it's gonna be an inexpensive reference, PLUS if u want a substring, with std::string&  u can only make an expensive substring, but with 
+    std::string_view u can move alround the "view"
+
+  std::cout << &x; -> prints out x's address
+
+12.7 Intro to pointers
+  -points are variables which store address
+  -use * to dereference pointers
+    int x {7};
+    int* ptr {&x}; -> NOTE &x does not return the address as literal, cuz a literal is a value whose address compiler knows during compile time. compiler does not know x's address 
+                      during compile time
+  -unitilized pointers also called wild pointers
+  -can't intilize pointers with literals
+  -unlike references, you can reassign pointers
+    int x {1};
+    int* ref {&x};
+    int y {3};
+    ref {&y;
+
+12.8 Null pointer:
+  -use int* prt = nullptr;-> for null pointer, 0 and NULL (from <cstddef> lib for NULL) works too, but no favoured
+  -u can check weather a pointer is a null pointer by:
+    if(ptr == nullptr){}-> there's no easy way to do the same in case of dangling pointers, so set pointers to null if it's no longer referencing a valid object
+    
+12.9 pointers and const
+-variable pointer pointing to const value:
+  const int* a {&y}; -> can't change value in y
+-const pointer point int to non const:
+  int* const a{&y}; -> now can't change who a can point to, but y's calue can be changed from a
+-const pointer to const int
+  const int* const a{&y}; -> can't change y or a
+
+12.10
+-PREFER PASSING BY CONST REFERENCE OR JUST REFERENCE OVER POINTERS
+
+12.11:
+-we can set nullptr to be a pointer's default value in a function
+-this is valid:
+  int a([[maybe_unused]] int* ptr){} -> avoids commpiler warning if ptr's never used
+-pointer reference
+  int a(int*& ptr){
+      ptr = nullptr; -> will set original pointer's value to null
+  }
+
+  int a(int* ptr){
+      ptr = nullptr; -> will NOT set original pointer's value to null
+  }
+-std::nullptr_t -> nullptr type, can only hold nullptr, and nullptr is native to it
+    #include <iostream>
+    #include <cstddef> // for std::nullptr_t
+
+    void print(std::nullptr_t)
+    {
+        std::cout << "in print(std::nullptr_t)\n";
+    }
+
+    void print(int*)
+    {
+        std::cout << "in print(int*)\n";
+    }
+
+    int main()
+    {
+        print(nullptr); // calls print(std::nullptr_t)
+
+        int x { 5 };
+        int* ptr { &x };
+
+        print(ptr); // calls print(int*)
+
+        ptr = nullptr;
+        print(ptr); // calls print(int*) (since ptr has type int*)
+
+        return 0;
+    }
+
+    here print(nullptr) resolves to the one with std::nullptr cuz it's native to that
+
+12.12 return by reference
+  const int& func(){
+    return 5;
+  }
+  results in undefined behaviour. Cuz the tmp rvalue's scope is out of reference,  unlike const int&{5}; which will extend the scope of temp rvalue, reutrn DOES NOT
+  THis one does not work too:
+  const int& returnByConstReference(const int& ref)
+  {
+      return ref;
+  }
+
+  int main()
+  {
+      // case 1: direct binding
+      const int& ref1 { 5 }; // extends lifetime
+      std::cout << ref1 << '\n'; // okay
+
+      // case 2: indirect binding
+      const int& ref2 { returnByConstReference(5) }; // binds to dangling reference
+      std::cout << ref2 << '\n'; // undefined behavior
+
+      return 0;
+  }
+
+  -returning a non const static local variable by reference means change in that reference by one variable means change by ALL, so not recommended
+  -if a function returns a reference and the variable it's return value is stored at is a non reference, then the function will effectively return by value
+  -if a program returns dangling reference, it will lead to undefined behaviour
+  -If a parameter to a fnc is passed by reference it's okay to return it by reference
+  -It’s okay for an rvalue passed by const reference to be returned by const reference:
+    const std::string& foo(const std::string& s)
+    {
+        return s;
+    }
+
+    std::string getHello()
+    {
+        return "Hello"; // implicit conversion to std::string
+    }
+
+    int main()
+    {
+        const std::string s{ foo(getHello()) };
+
+        std::cout << s;
+
+        return 0;
+    }
+  -The caller can modify values through the reference
+    int& max(int& x, int& y)
+    {
+        return (x > y) ? x : y;
+    }
+
+    int main()
+    {
+        int a{ 5 };
+        int b{ 6 };
+
+        max(a, b) = 7; // sets the greater of a or b to 7
+
+        std::cout << a << b << '\n';
+
+        return 0;
+    }
+
+  NOTE: when a function is returned by value it returns rvalue and when it's returned by reference it's by lvalue
+  NOTE: This does not work:
+    void CalculateStuff(long& out_param) {
+        long result;
+        // [...] complicated calculations
+        out_param = result;
+    }
+
+    int stuff;
+    CalculateStuff(stuff);
+    cuz stuff is implicitly convreted to long, which will be a temporary, and we are doing non const reference assignment to temporary with the return so undefined
+
+12.13 in and out parameters
+  -passing stuff by value is in cuz function can't modify the input it got, so parameters are only used as input
+  -parameters by NON CONST reference are out cuz we can have function put the output stuff on it.
+  -the object that we pass as out parameter MUST be allocated an assignable object even if we don't intend to use it:
+  #include <iostream>
+
+    int getByValue()
+    {
+        return 5;
+    }
+
+    void getByReference(int& x)
+    {
+        x = 5;
+    }
+
+    int main()
+    {
+        // return by value
+        [[maybe_unused]] int x{ getByValue() }; // can use to initialize object
+        std::cout << getByValue() << '\n';      // can use temporary return value in expression
+
+        // return by out parameter
+        int y{};                // must first allocate an assignable object
+        getByReference(y);      // then pass to function to assign the desired value
+        std::cout << y << '\n'; // and only then can we use that value
+
+        return 0;
+    }
+  -when doing out parameter it's not very obvious that we r doing it from the caller's side:
+    for when we return by value:
+      int x = getVal(); 
+    when we return by out:
+      getVal(x); -> from caller side it could just be a normal function call with in parameter
+    SO best to not use out parameter unless necessary
+
+12.14 Type deduction for references and pointers:
+  -just like for const, auto drops the & qualifiers too (BUT NOT THE POINTERS!!)
+    int& a {b};
+    auto c {a}; -> c does deep copy of a
+    auto& c {a}; -> c has reference of a
+  -top level const -> one that applies to the type being initialized itself eg:
+    int* const ptr {&a}; -> top level const
+    const int* {&a}; -> low level cuz it points to the opb being pointed to
+    const int x {1}; -> top level const cuz applies to var being intialized itself
+  -reference types are top level const implicitly cuz u can't change who it refereces to once it's assigned
+  -const int* const -> both top and low level const
+  -type deduction for const reference: reference is dropped first which will make the const top level which is then dropped eg:
+    const std::string& getConstRef(); // some function that returns a reference to const
+
+    int main()
+    {
+        auto ref1{ getConstRef() }; // std::string (reference dropped, then top-level const dropped from result)
+
+        return 0;
+    }
+    We can then reapply it:
+      const auto ref1& {getConstRef()};
+  -The folloing means the function is constexpr and it returns a const
+    constexpr const std::string_view& getConstRef() // function is constexpr, returns a const std::string_view&
+    {
+        return hello;
+    }
+  - constexpr const auto& ref4{ getConstRef() }; // constexpr const std::string_view& (reference reapplied, low-level const not dropped, constexpr applied)
+        this basically means the expression should be evaluated at compile time and the value is it's referencing is const
+  -C++20 -> We also have constinit with ia basically constexpr except the expression is not immutable even if it's run at compile time, eg:
+      constinit int a {1+1}; -> a is still modifiable but a = 1+1; is guranteed to be evaluated at compile time
+      Pre C++20 one way to acheive this was thru constexpr functions:
+      consteval int calculateInitialValue() {
+      return 1 + 2;
+      }
+
+      int main() {
+          // Evaluation happens at compile-time, but 'a' is a normal stack variable
+          int a = calculateInitialValue(); 
+          
+          a++; // Works perfectly
+    }
+  -pointer is not dropped with auto, cuz unlike reference, pointer is a value in itself:
+    int* x {&y};
+    auto m {x}; -> m is a pointer
+    We can also use * to make this even more clearer:
+    auto* m {x};
+    NOTE: when doing auto* if the type of value it's being initialized with is not of pointer type it will be error
+      int x {5};
+      auto* {x}; -> error
+
+  -type deduction with const pointers:
+    int* y {&x};
+    const auto ptr {y}; -> int* const
+    auto const ptr {y}; -> int* const
+    const auto* ptr {y}; -> const int*
+    auto* const ptr {y}; -> int* const
+
+    int main()
+    {
+        std::string s{};
+        const std::string* const ptr { &s };
+
+        auto ptr1{ ptr };  // const std::string*
+        auto* ptr2{ ptr }; // const std::string*
+
+        auto const ptr3{ ptr };  // const std::string* const
+        const auto ptr4{ ptr };  // const std::string* const
+
+        auto* const ptr5{ ptr }; // const std::string* const
+        const auto* ptr6{ ptr }; // const std::string*
+
+        const auto const ptr7{ ptr };  // error: const qualifer can not be applied twice
+        const auto* const ptr8{ ptr }; // const std::string* const
+
+        return 0;
+    }
+
+    NOTE: auto DOES NOT DROP low level const, only top level one directly effecting the variable the auto is duducing the type of
+
+12.15: std::optional
+
+  -sentinal value -> a value that usually does not occur as a function results so used as a way to signify error to the caller
+  -std::numerical_limits<int>::lowest(); -> gives the most negative int
+  -std::numerical_limits<int>::max() -> gives the most positive int
+      BOTH are in <limits> library
+  -std::optional<T> in <optional> library
+    can have value of type T or std::nullopt stored in it
+    std::optional<int> print(int g){
+        if(g == 0){
+            return {}; // or return {std::nullopt}; both means same
+          }
+        else{
+            return g;
+          }
+      }
+  -can be used togive optional parameters too:
+    void printIDNumber(std::optional<const int> id = std::nullopt)
+    {
+        if (id)
+            std::cout << "Your ID number is " << *id << ".\n";
+        else
+            std::cout << "Your ID number is not known.\n";
+    }
+
+    int main()
+    {
+        printIDNumber(); // we don't know the user's ID yet
+
+        int userid { 34 };
+        printIDNumber(userid); // we know the user's ID now
+
+        printIDNumber(62); // we can also pass an rvalue
+
+        return 0;
+  -Cannot do references for std::optional as of c++23
+  NOTE:preferfunctionoverloadingoverstd::optionalforoptional parameters

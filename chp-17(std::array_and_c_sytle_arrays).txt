@@ -1,0 +1,562 @@
+17.1:
+  -std::array, same as std::vector, except that it's lenght must be a constexpr
+    std::array <int, 5> {};
+
+    std::array<int, 7> a {}; // Using a literal constant
+
+  with constexpr int
+    constexpr int len { 8 };
+    std::array<int, len> b {}; // Using a constexpr variable
+
+  with enum
+    enum Colors
+    {
+        red,
+        green,
+        blue,
+        max_colors
+    };
+    std::array<int, max_colors> c {}; // Using an enumerator
+  with macro (don't do it tho)
+    #define DAYS_PER_WEEK 7
+    std::array<int, DAYS_PER_WEEK> d {}; // Using a macro (don't do this, use a constexpr variable instead)
+
+  NOTE: non constexpr expression can't be used for this. 
+    int a {5};
+    std::array <int, a> {}; -> compile time error
+
+  -std::array's an aggregate
+  -when defined without an intializer it's member's are left unitialized, so use {}
+  -std::array being const means u can't change it's member's values
+  -can be constexpr too
+  -CTAD for std::array C++17:
+      constexpr std::array a1 { 9, 7, 5, 3, 1 }; // The type is deduced to std::array<int, 5>
+  NOTE: CTAD does not support partial omission of template args:
+    std::array al<int> {1, 2, 3}; -> error
+  -we can use TAD to omit the length using std::to_array (c++20)
+    constexpr auto arr{std::to_array <int> {1, 2, 3}};
+    constexpr auto arr{std::to_array <int, 5> {1, 2, 3}};
+  -NOTE: std::to_array{} is a lot more expensive than std::arry to this is not preferred
+  -we can use operator[] to access array elements but there is not bound check
+
+17.2
+  -for an array defined within the same function, std::size(arr) will give u a constexpr value
+  -but due to langugage defect, for an array passed into a function, the same std::size(arr) will give u a non constexpr value
+    #include <array>
+    #include <iostream>
+    void printLength(const std::array<int, 5> &arr)
+    {
+        constexpr int length{ std::size(arr) }; // compile error!
+        std::cout << "length: " << length << '\n';
+    }
+
+    int main()
+    {
+        std::array arr { 9, 7, 5, 3, 1 };
+        constexpr int length{ std::size(arr) }; // works just fine
+        std::cout << "length: " << length << '\n';
+
+        printLength(arr);
+
+        return 0;
+    }
+
+    the above has been fixed in c++23
+    -we also have .at() for std::array
+    -std::get() [NOT A MEMBER FUNCTION] to do compile time bound checking for std::array, not for std::vector tho cuz it's dynamic
+      eg: 
+      int a = std::get<2>(arr);
+
+17.3:
+  -when passing to a func, just make std::array const ref
+  -we can make a fnc accept array thru template:
+    template<typename T, std::size_t N> -> N is non type template
+    int smfnc(std::array<T, N> arr){}
+  -we can static assert the array size before doing anything 
+    template<typename T, std::size_t N> -> N is non type template
+    int smfnc(std::array<T, N> arr){
+        static_assert(N != 0); -> not std::size(arr) CUZ that's not a constexpr
+      }
+    or just use std::get() for compile time length check when getting an element
+  -if c++20 we can use auto for non template paremeter:
+    template<typename T, auto N> -> N is non type template
+    int smfnc(std::array<T, N> arr){
+        static_assert(N != 0); -> not std::size(arr) CUZ that's not a constexpr
+      }
+  -std::array cannot do MOVE like std::vector, so returning by value unless it's small and performance is not of concern is one option
+    other option is to use the out parameter for it:
+      #include <array>
+      #include <limits>
+      #include <iostream>
+
+      template <typename T, std::size_t N>
+      void inputArray(std::array<T, N>& arr) // pass by non-const reference
+      {
+        std::size_t index { 0 };
+        while (index < N)
+        {
+          std::cout << "Enter value #" << index << ": ";
+          std::cin >> arr[index];
+
+          if (!std::cin) // handle bad input
+          {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            continue;
+          }
+          ++index;
+        }
+
+      }
+
+      int main()
+      {
+        std::array<int, 5> arr {};
+        inputArray(arr);
+
+        std::cout << "The value of element 2 is " << arr[2] << '\n';
+
+    return 0;
+  }
+
+17.4
+  assigning std::array struct types:
+    constexpr std::array<Houst, 9> {};
+  -with CTAD:
+    constexpr std::array {House{1, 2, 3}, House{1, 2, 3}, House{1, 2, 3}, House{1, 2, 3}};
+  -w/o mentioning intializer type for each:
+    //BUGGY!!
+    constexpr std::array<House, 3> {{1, 2, 3}, {1, 2, 3}, {1, 2, 3}, {1, 2, 3}};
+    NOTE: simplified std::array looks like dis:
+    namespace std{
+    template typename<T, std::size_t N>
+    struct array{
+        T imlplementation_def_name[N] {}; 
+        //some other stuffs
+      }
+    }
+    so when we do
+      constexpr std::array<House, 3> {{1, 2, 3}, {1, 2, 3}, {1, 2, 3}, {1, 2, 3}};
+    to the c style array inside std::array struct it looks like:
+        T imlplementation_def_name[N] {1, 2, 3}, {1, 2, 3}, {1, 2, 3}, {1, 2, 3}; 
+      it will try to parse {1, 2, 3} then it will see , and now we r fucked
+    so the non buggy way is: use double {}, that way the struct will reach the internal array in proper format
+      constexpr std::array<House, 3> {{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}, {1, 2, 3}}};
+
+  NOTE: we don't have to do double braces for everything to satisfy the internal C style array due to something called brace elison where compiler does it for us, but in some cases
+        that won't happen like above and we have to do it
+        so technically it might be safer to just do {{}} double braces every time!!
+
+17.5
+  Array of references:
+    -we can't directly have an array of references:
+      std::array<int&, 3> a {};  -> ILLEGAL!!
+    -but we can do std::reference_wrapper<T> to overcome dis:
+      std::array<std::reference<int>, 3> a {x, y, z}; -> now arr[0] is reference to x and so on... 
+    -we can't just use operator= to a reference_wrapper type
+      std::reference_wrapper<int> a = x;
+      a = 3; -> ILLEGAL
+      a = b; -> IS LEGAL but it's to reset the reference wrapper, basically making it reference another variable b.
+    -if we wanna change value itself, we need to use .get() member functino [NOTE: DIFFERENCE FROM std::get() NON MEMBER FUNCTION!!]
+      std::reference_wrapper<int> a = x;
+      a.get() = 3; -> changes value of a and in turen x to 3
+    -when we use it to print and stuff we don't need .get(), implicitly converted to T&:
+      std::array<std::reference<int>, 3> a {x, y, z}; -> now arr[0] is reference to x and so on... 
+      std::reference_wrapper<int> b = x;
+      std::cout << a[0] << b;
+    -using .get() is not a prob too:
+      std::cout << a[0].get() << b.get();
+    NOTE: to make std::reference_wrapper<T> type obj we can also do:
+      int y {1};
+      auto x {std::ref{y}}; -> deduced to std::reference_wrapper<int>
+      OR
+      int y {1};
+      auto x {std::cref{y}}; -> deduced to std::reference_wrapper<const int>
+
+17.6
+  -we can use foreach loop for std::array liek std::vector, it doesn't work for enums tho
+  -one way to modify enum to string function would be to have the strings in array for corresponding enums
+  eg:
+      namespace Color
+      {
+          enum Type
+          {
+              black,     // 0
+              red,       // 1
+              blue,      // 2
+              max_colors // 3
+          };
+
+          using namespace std::string_view_literals; // for sv suffix
+          constexpr std::array colorName { "black"sv, "red"sv, "blue"sv };
+          static_assert(std::size(colorName) == max_colors);
+
+          constexpr std::array types { black, red, blue }; // A std::array containing all our enumerators
+          static_assert(std::size(types) == max_colors);
+      };
+
+      constexpr std::string_view getColorName(Color::Type color)
+      {
+          return Color::colorName[color];
+      }
+
+      // Teach operator<< how to print a Color
+      // std::ostream is the type of std::cout
+      // The return type and parameter type are references (to prevent copies from being made)!
+      std::ostream& operator<<(std::ostream& out, Color::Type color)
+      {
+          return out << getColorName(color);
+      }
+
+      int main()
+      {
+          for (auto c: Color::types) // ok: we can do a range-based for on a std::array
+              std::cout << c << '\n';
+
+          return 0;
+      }
+
+17.7
+  -intro to c style array:
+    -int a[20] {}; -> each value is zero initialized
+    -it's size shouldbe constexpr or literal like for std::arry too but some compiler might allow it to be non const too
+    -unlike std libraries container who use std::size_t for indexsing, this can use both signed and unsigned stuff
+    -we can aggregrate initialize it
+    -cannot type deduce a c style array's type using CTAD (cuz it's not template type) or auto
+      auto a[]{1, 2, 4}; -> error
+    -both const and constexpr arrays must be initialized during declaration
+    -sizeof() in c style array gives you the length of array in bytes:
+        sizeof(a); -> 20*4 = 80bytes
+    -std::size() can be used to get the array's length, in C++17
+        std::size(a); -> 20 
+    -for c++14 or older we can do the following to determine a c style array's length:
+      template <typename T, std::size h>
+      constexpr std::size_t length(const T(&)[N]) noexcept
+      {
+        return N;
+      }
+
+      int main() {
+
+        int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+        std::cout << "The array has: " << length(array) << " elements\n";
+
+        return 0;
+      }
+
+    OR this:
+
+    int main()
+    {
+        int array[8] {};
+        std::cout << "The array has: " << sizeof(array) / sizeof(array[0]) << " elements\n";
+
+        return 0;
+    }
+
+
+  -multi assignment is illegal in c style array:
+    a = {1, 2, 3} -> illegal if it's array[3] but works for std::vector
+
+17.8:
+  C style array decay
+    -decay - lose info about it's size and it's now just a raw pointer of that type
+    -only places array decay does not happen is during initialization or when we use sizeof() or pass it to another value for reference
+      int a[] = {1, 2};
+      std::cout << a[0]; -> decay already happened
+    NOTE: This also makes sizeof() a little dangerous as it iwll just return size of the ponter, so use std::size in c++17 or std::ssize in c++20
+    -so either pass arr with it's length, or put a sentinal value like -1 at the end marking the end of an array
+
+      Prefer std::string_view for read-only strings (string literal symbolic constants and string parameters).
+      Prefer std::string for modifiable strings.
+      Prefer std::array for non-global constexpr arrays.
+      Prefer std::vector for non-constexpr arrays.
+    c style array are only okay as constexpr global values -> since we don't need to pass it it avaoids decay related issues or as parameter to function or class that wants to 
+      handle C-style strings, as passin std::string_view would require traversing the c style string to get it's length, if we don't need length just pass it as it is
+
+17.9
+  -According to c++ standard this is UB:
+    int x {};
+    int* ptr {&x};
+    std::cout << ptr;
+    ++ptr; -> UB
+    std::cout << ptr;
+    it's UB cuz according to the standard, pointer arithmetic is only legal when done within the framework of an array
+  -array subscripting is done via pointer arithmetic:
+    *(n + ptr) -> ptr[n]; 
+  - *(ptr - n) -> ptr[-n]
+      we can go to previous element like this
+      int a[] {1, 2, 3, 4};
+      int *ptr {a[3]};
+      std::cout << ptr[-1]; -> prints 3
+  -we can also iterate thru loop using ponter arithmetic
+    begin = arr;
+    end = arr + std::size(arr);-> NOTE: ok to reference ANY pointer as long as u don't dereference it!
+    for(; begin < end; ++begin){
+        std::cout << begin;
+    }
+  -C++ foreach loop : for(int a : arr){} is implmented using similar technique:
+      #include <iostream>
+
+      int main()
+      {
+        constexpr int arr[]{ 9, 7, 5, 3, 1 };
+
+        auto __begin = arr;                // arr is our begin-expr
+        auto __end = arr + std::size(arr); // arr + std::size(arr) is our end-expr
+
+        for ( ; __begin != __end; ++__begin)
+        {
+          auto e = *__begin;         // e is our range-declaration
+          std::cout << e << ' ';     // here is our loop-statement
+        }
+
+        return 0;
+      }
+
+NOTE: WHEN YOU DEFINE A CHAR TYPE C-STYLE ARRAY A NULL TERMINATOR IS AUTOMATICALLY ADDED!!
+  char arr[255] {"string"}; -> length with std::size() is 255, but it valid with std::cout << arr; as there's a null terminator
+17.10
+  -C style strings decay to const char* and are just like c style array
+  -while c style string literals are still in use, c style string objects are not instead std::string or std::string_view are used
+  -when printin c style string, the std::cout prints untill it enconters null terminator, if it doesn't then it will continue to print the adjustend blocks and it's a UB
+  -input using c style string:
+    int main(){
+      char arr[200] {};
+      std::cin >> arr; -> unsafe, someone malicious can cause buffer overflow and overwrite something in program to take advantage of it
+    }
+    safe alt:
+    int main(){
+      char arr[200] {};
+      std::cin.getline(rolls, std::size(rolls));
+    }
+    OR EVEN BETTER JUST USE STD::STRING!! But std::string pauses on white space chars so we need to use
+      std::string str {};
+      std::getline(std::cin, str);
+  -to get length of c style array we can:
+    use std::size() or std::ssize in c++20
+      however it doesn't work on decayed c style string and returns the length of the string with null terminator added in or the entire length of array if u used that:
+        int main()
+        {
+            char str[255]{ "string" }; // 6 characters + null terminator
+            std::cout << "length = " << std::size(str) << '\n'; // prints length = 255
+
+            char *ptr { str };
+            std::cout << "length = " << std::size(ptr) << '\n'; // compile error
+
+            return 0;
+        }
+  -one way to use it is by using std::strlen(). This gives us the length excluding the null terminator:
+    #include <cstring> // for std::strlen
+    #include <iostream>
+
+    int main()
+    {
+        char str[255]{ "string" }; // 6 characters + null terminator
+        std::cout << "length = " << std::strlen(str) << '\n'; // prints length = 6
+
+        char *ptr { str };
+        std::cout << "length = " << std::strlen(ptr) << '\n';   // prints length = 6
+
+        return 0;
+    }
+
+  -other c style string functions:
+    strlen() -- returns the length of a C-style string
+    strcpy(), strncpy(), strcpy_s() -- overwrites one C-style string with another
+    strcat(), strncat() -- Appends one C-style string to the end of another
+    strcmp(), strncmp() -- Compares two C-style strings (returns 0 if equal)
+
+    Except for strlen(), we generally recommend avoiding these.
+  -AVOID NON-CONST C-STYLE STRING UNLESS YOU HAVE A REALLY SPECIFIC REASON!! STICK WITH STD::STRING OTHERWISE!
+
+NOTE: when we put something in an array, the compiler is obliged to put it in the stack, can't reference an array from the heap
+17.11
+  -ways to initialize c style arrays:
+    const char name[] { "Alex" };        // case 1: const C-style string initialized with C-style string literal
+    const char* const color{ "Orange" }; // case 2: const pointer to C-style string literal
+  
+      In above example in case 1, it's an array, so even if "Alex" as a c style string is already in .rodata section of the program file the compiler coppies it's content into the
+        stack before referencing. Leading to us having 2 copies of the same data
+      For case 2, the pointer can directly reference from the .rodata section. So we will only have 1 copy so it's faster
+
+  -when outputting a c style array/ pointers the output depends on the type of array or pointers, eg:
+    int narr[]{ 9, 7, 5, 3, 1 };
+    char carr[]{ "Hello!" };
+    const char* ptr{ "Alex" };
+
+    std::cout << narr << '\n'; // narr will decay to type int*  -> PRINTS THE ADDRESS OF narr
+    std::cout << carr << '\n'; // carr will decay to type char* -> PRINTS Hello!
+    std::cout << ptr << '\n'; // name is already type char* -> PRINTS Alex
+      When u give it a char* the compiler will assume you want to content the pointer is pointing too until null termination
+      However it  can have unintended consequences like:
+        char c{ 'Q' };
+        std::cout << &c;
+        return 0;
+          the above program prints Q and some garbage value until some NULL terminator is encountered.
+
+      Better to use this if u wanna print the address of some char:
+        #include <iostream>
+        int main()
+        {
+            const char* ptr{ "Alex" };
+
+            std::cout << ptr << '\n';                           // print ptr as C-style string
+            std::cout << static_cast<const void*>(ptr) << '\n'; // print address held by ptr
+
+            return 0;
+        }
+
+NOTE:Avoid C-style string symbolic constants in favor of constexpr std::string_view.
+
+17.12
+  -Initializing 2D array:
+    int array[3][5]
+    {
+      { 1, 2, 3, 4, 5 },     // row 0
+      { 6, 7, 8, 9, 10 },    // row 1
+      { 11, 12, 13, 14, 15 } // row 2
+    };
+  -omitting the leftmost dimension is allowed, compiler can deduce it, but anything else is not allowed
+
+    int array[][5] -> LEGAL
+    {
+      { 1, 2, 3, 4, 5 },     // row 0
+      { 6, 7, 8, 9, 10 },    // row 1
+      { 11, 12, 13, 14, 15 } // row 2
+    };
+
+    int array[][] -> ILLEGAL
+    {
+      { 1, 2, 3, 4, 5 },     // row 0
+      { 6, 7, 8, 9, 10 },    // row 1
+      { 11, 12, 13, 14, 15 } // row 2
+    };
+
+    int array[3][] -> ILLEGAL
+    {
+      { 1, 2, 3, 4, 5 },     // row 0
+      { 6, 7, 8, 9, 10 },    // row 1
+      { 11, 12, 13, 14, 15 } // row 2
+    };
+
+17.13
+  Multidim array in std::array:
+  -traditional way:
+    std::array<std::array<int, 4>, 3> arr {{  // note double braces
+        { 1, 2, 3, 4 },
+        { 5, 6, 7, 8 },
+        { 9, 10, 11, 12 }}};
+  -passing a multi dim std::array:
+    template<typename T, std::size_t ROW, std::size_t COL>
+    void something(std::array<std::array<T, COL>,ROW>& arr){
+      for(const auto& row : arr){
+        for(const auto& element : row){
+
+        }
+      }
+    }
+    int main()
+    {
+        std::array<std::array<int, 4>, 3>  arr {{
+            { 1, 2, 3, 4 },
+            { 5, 6, 7, 8 },
+            { 9, 10, 11, 12 }}};
+
+        something(arr);
+
+        return 0;
+    }
+  BETTER WAY:(using type aliasing):
+  template<typename T, std::size_t Row, std::size_t Col>
+  using Array2d = std::array<std::array<T, COL>,ROW>;
+
+  now we can jut do:
+  Array2d<int, 3, 4> arr {{
+
+            { 1, 2, 3, 4 },
+            { 5, 6, 7, 8 },
+ { 9, 10, 11, 12 };
+    }}
+
+  // An alias template for a three-dimensional std::array
+  template <typename T, std::size_t Row, std::size_t Col, std::size_t Depth>
+  using Array3d = std::array<std::array<std::array<T, Depth>, Col>, Row>;
+
+  -getting size of different dimensions of a multi-dim array:
+    
+    Array2d<int, 3, 4> arr {{
+
+              { 1, 2, 3, 4 },
+              { 5, 6, 7, 8 },
+              { 9, 10, 11, 12 };
+      }}
+    to get size of first time we can either use member fnc .size() or std::size(). 
+    arr.size();
+    for second dimension we could do this:
+      arr[0].size(), but if length of previous dimension is zero then this leads to undefined behaviour
+    So, a better way to use template functions:
+    template<typename T, std::size_t Row, std::size_t Col>
+    void getRow(Array2d<T, Row, Col>){
+      return Row;
+    }
+
+    template<typename T, std::size_t Row, std::size_t Col>
+    void getCol(Array2d<T, Row, Col>){
+      return Col;
+    }
+
+  -flattening out an array:
+    template<typename T, std::size_t Row, std::size_t Col>
+    using Arrar2dFlat = std::array<T, Row*Col>;
+
+    template<typename T, std::size_t Row, std::size Col>
+    class Array2dView{
+    private:
+      std::reference_wrapper<Array2dFlat<T, Row, Col>> m_arr{}
+    public:
+      Array2dView(Array2dFlat<T, Row, Col>& arr) : m_arr{arr}{}
+
+      T& operator[](int i){return Array2dView.get()[static_cast<std::size_t>(i)];}
+      const T& operator[](int i) const{return Array2dView.get()[static_cast<std::size_t>(i)];}
+
+      //NOTE: we using () here cuz multiple paramters in [] is only supported starting c++23
+      T& operator()(int i, int j){return Array2dView.get()[static_cast<std::size_t>(i * cols() + j)];}
+      const T& operator()(int i, int j) const{return Array2dView.get()[static_cast<std::size_t>(i * cols() + j)];}
+
+      //IN C++ 23
+      T& operator[](int row, int col) { return m_arr.get()[static_cast<std::size_t>(row * cols() + col)]; }
+      const T& operator[](int row, int col) const { return m_arr.get()[static_cast<std::size_t>(row * cols() + col)]; }
+
+      int rows() const { return static_cast<int>(Row); }
+      int cols() const { return static_cast<int>(Col); }
+      int length() const { return static_cast<int>(Row * Col); }
+    }
+
+  -C++23: std::mdspan, it's basically what we implemented above, like std::string_view but for a view that flattens multi dim array, 
+  template<typename T, std::size_t Row, std::size_t Col>
+  using Array2dFlat = std::array<T, Row*Col>
+
+  int main(){
+    ArrayFlat2d<int, 3, 4> arr {
+        1, 2, 3, 4,
+        5, 6, 7, 8,
+        9, 10, 11, 12 
+    };
+    std::mdspan mdView{arr.data(), 3, 4}; //the first element could either be .data() or a decayed C-style string, just gotta be a data member
+    std::size_t row {mdView.extents().extents(0)}; -> .extents() gives us array's metadata, .extends(0), gives us it's first dimenstion, i.e row for this isntance
+                                                                                            .extents(1) would give us column
+    for (std::size_t i=0; i < mdView.size(); ++i)
+        std::cout << mdView.data_handle()[i] << ' ';
+    std::cout << '\n';
+
+  for (std::size_t row=0; row < rows; ++row)
+      {
+          for (std::size_t col=0; col < cols; ++col)
+              std::cout << mdView[row, col] << ' ';// In C++23, operator[] accepts multiple indices, so we use [row, col] as our index instead of [row][col].
+          std::cout << '\n';
+      }
+      std::cout << '\n';
+    }
+
+NOTE: C++26 will include std::mdarray, which essentially combines std::array and std::mdspan into an owning multidimensional array!

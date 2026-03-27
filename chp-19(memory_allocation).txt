@@ -1,0 +1,100 @@
+NOTE: To initialize a std::vector with specific length use () initializer, with list of stuff, use {}
+NOTES:
+  const char* me = "hello"; -> directly read from .ro section
+  const char[] me = "bye"; -> data from .ro is first copied to stack and then captured by the array.
+  std::string a {"aa"}; -> first creates copy in .rodata and copies into the heap, the heap address is then captured by a.
+  std::string a {"aa"s}; -> same as above, except when using s, the std::string's constructor is passed the "aa" along with it's length, so it's easier. Plus s makes it ok to use 
+                          auto 
+  std::string_view a{"ss"sv}; -> does not copy to heap, the address of the data in .rodata section is directly captured, so faster. Plus cannot be changed
+  
+19.1
+  -Types of memory allocation:
+    -static memory allocation: happens for static and global variable, created when declared and destroyed when program ends
+    -automatic memory allocation: happends for local var and function parameters, allocated when relevent block exists in the stack and popped when the block exits out
+    -dynamic memory allocation: ....(topic here)
+  -weakness of first 2 types:
+    -their size must be known at compile time
+    -memory allocation and deallocation happen automatically
+  -dynamically allocation one stuff:
+    int* ptr{new int};
+    *ptr = 7; -> stored in the heap, slower than the stack
+  NOTE: all automatic allocation and deallocation happen only in the stack, in heap everything must be automatic!
+    int* ptr{new int{5}}; //list initialization
+    int* ptr{new int(5)}; //direct initialization
+  -deleting: not the ptr is not pointing to the memory and the memory has been returned back to the OS
+    delete ptr; //returning the memory back to OS
+    ptr = nullptr; //making ptr point to nothing
+  -double deleting (double freeing) or dereferencing a deallocated pointer will lead to UB
+NOTE: Set deleted pointers to nullptr unless they are going out of scope immediately afterward.
+      Try not to have multiple pointers point to same place in heap
+  -new operation CAN fail, like in situation where the OS runs out of memory to give. The program will throw bad_alloc error in that case.
+    we can use exceptional handling or do this:
+      int* value {new(std::nothrow) int {}}; -> will return null upon failed allocation 
+      if(!value){std::cout << "Cannot allocate memory\n";}
+
+19.2
+  DYNAMICALLY ALLOCATED ARRAYS:
+      std::size_t length {5}; -> either std::size_t OR if it's int then constexpr OTHERWISE it will warn you
+      int* arr{new int[length]{}}; -> length can be non-constexpr
+    -ways to initialize:
+      auto arr{new int[5]{4,5,6,7,9}};
+      auto arr1{new int[5]{}}; -> zero initialization
+      arr1[0] = 5;
+      delete[] arr; -> dellocates that memory
+      arr = nullptr;
+    -no way to directly resize an array, instead we can make a new array, copy over it's content and delete the old array. So instead use std::vector.
+
+19.3
+  -for dynamically created objects with new, destructor must be called manually with delete, but for object created in compile, it's distrctor will be called when it goes out of scope
+    eg:
+      #include <iostream>
+
+      class Simple
+      {
+      private:
+          int m_nID{};
+
+      public:
+          Simple(int nID)
+              : m_nID{ nID }
+          {
+              std::cout << "Constructing Simple " << nID << '\n';
+          }
+
+          ~Simple()
+          {
+              std::cout << "Destructing Simple" << m_nID << '\n';
+          }
+
+          int getID() { return m_nID; }
+      };
+
+      int main()
+      {
+          // Allocate a Simple on the stack
+          Simple simple{ 1 };
+          std::cout << simple.getID() << '\n';
+
+          // Allocate a Simple dynamically
+          Simple* pSimple{ new Simple{ 2 } };
+
+          std::cout << pSimple->getID() << '\n';
+
+          // We allocated pSimple dynamically, so we have to delete it.
+          delete pSimple;
+
+          return 0;
+      } // simple goes out of scope here
+
+    Here for simple 1, it's destroyed automatically after function goes out of score while SImple 2 is destroyed manually cuz it's dynamically allocated
+
+  -About RAII(Resource Acquision is initialization):
+    It's a lifecycle gurentee a class must provide to fulfill this contract:
+      -Acquision: resource is acturied during construction (like the required heap memory acquired by the class's object with initialization)
+      -Certainity: the resource is gurenteed to be valide during the class's duration
+      -Release: when the object goes out of scope, it gurentees that the resource it held are released
+
+  NOTE: when std::exit() is called, it doesn't unwind the stack, it just ends the program so no destructors are called!
+
+
+

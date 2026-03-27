@@ -1,0 +1,836 @@
+-classes:
+14.2
+  -struct and classes are technically VERY similar:
+    class Emp{
+    public:
+      int m_id {};
+      int m_age {};
+      int m_salary {};
+    };
+
+14.3
+  Member functions (methods in other languages):
+    -functions defined outside class types are called non member functions
+    struct Date
+    {
+        int year {};
+        int month {};
+        int day {};
+
+        void print() // defines a member function named print
+        {
+            std::cout << year << '/' << month << '/' << day;
+        }
+    };
+    
+    int main(){
+      Date date {2026, 01, 01};
+      date.print();//the date object itself is implicitly passed
+    }
+    
+    NOTE: member functions are like structs too, they are implicitly inline and as long as their definition is same and they are inside class types they can be included in multipel 
+        files
+
+    -we can call member functions/data member in any order we like:
+      struct Foo{
+        int z() { return m_data; } // We can access data members before they are defined
+        int x() { return y(); }    // We can access member functions before they are defined
+
+        int m_data { y() };        // This even works in default member initializers (see warning below)
+        int y() { return 5; }
+      };
+    -however data members are defined in order:
+      struct Bad
+      {
+          int m_bad1 { m_data }; // undefined behavior: m_bad1 initialized before m_data
+          int m_bad2 { fcn() };  // undefined behavior: m_bad2 initialized before m_data (accessed through fcn())
+
+          int m_data { 5 };
+          int fcn() { return m_data; }
+      };
+      The above will result in error
+
+    -member functions can be overloaded:
+      struct Date
+      {
+          int year {};
+          int month {};
+          int day {};
+
+          void print()
+          {
+              std::cout << year << '/' << month << '/' << day;
+          }
+
+          void print(std::string_view prefix)
+          {
+              std::cout << prefix << year << '/' << month << '/' << day;
+          }
+      };
+    -we can have a class type with just member functions too
+
+
+14.4:
+  -just like for fundamental types, const struct objects should be initialized upon creation:
+    const Emp  e {1, 2};
+    const Emp e; -> compile time error
+  -const member functions (since this object is implicitly passed, we also need a way to make it a constant parameter for member functions, this is a way):
+      void print() const
+      {
+          std::cout << year << '/' << month << '/' << day;
+      }
+  NOTE: ONLY CONST MEMBER FUNCTIONS CAN BE CALLED UPON CONST OBJECTS
+    So if you remove const from member functions and you have called it on const objects it might break
+    struct Date
+    {
+        int year {};
+        int month {};
+        int day {};
+
+        void print() // non-const
+        {
+            std::cout << year << '/' << month << '/' << day;
+        }
+    };
+
+    void doSomething(const Date& date)
+    {
+        date.print(); // here the object date is constant, since we are using it as const reference and we re callling a non const member function to compile error
+    }
+
+    int main()
+    {
+        Date today { 2020, 10, 14 }; // non-const
+        today.print();
+
+        doSomething(today);
+
+        return 0;
+    }
+  NOTE: const member functions can be called by non const objects too
+  NOTE: the difference of const in parameter is enough of a difference for overloading purposes in case of pointers and reference, BUT NOT in case of values.
+  -Keeping the last note in mind, when we call a member function thru object, this is passed implicitly as a POINTER. That's why const vs non const difference is enough for 
+      overloading in case of member functions too:
+        struct Something
+        {
+            void print()
+            {
+                std::cout << "non-const\n";
+            }
+
+            void print() const
+            {
+                std::cout << "const\n";
+            }
+        };
+
+    NOTE: the above works because form caller's perspective, when we pass by value to a func with const parameter, it's the same there is no difference:
+      const int a = 0;
+      int b = 0;
+      calling(a);
+      calling(b); 
+      here doesn't matter if calling taks int as const or on const, both calls is valid.
+      BUT in case of references/ pointers:
+      
+      int& p = a;
+      const int& q = b;
+      calling(p);
+      calling(q);
+      here, if calling's method signature was:
+        calling(int& p)
+        then the second call would be invalid cuz the function requires the given refence to be modifiable 
+
+14.5:
+  -structs and classes are essentially the same, the only difference being that struct's members are public by default and for classes it's private.
+  -u can change the default access modifier as follows:
+    struct smthing{
+      private:
+        int a{};
+        int b{};
+        int c{}:
+    };
+
+    class smthing{
+    public:
+        void print(int a){
+        std::cout << a;    
+      }
+    }
+
+  NOTE: aggregrates are simple class types with all public members, no constructors and we can initialize an object for it with list initalization {}
+  -convnetion to name private member fnc stating with m_. Just like local static with s_ and globals with g_
+  
+  NOTE ABOUT ACCESS MODIFIER: private members can be CALLED THROUGH ANY OBJECT, as long as it's called from within the class the object is an image of:
+    eg:
+      class Point3d {
+        int m_x{};
+        int m_y{};
+        int m_z{};
+
+      public:
+        bool isEqual(Point3d &point) const {
+          if (m_x == point.m_x && m_y == point.m_y && m_z == point.m_z)
+            return true;
+          return false;
+        }
+      };
+    
+    here, m_x, m_y and m_z are private but still accessable even if it looks a little weird for Point3d& point.
+
+14.6:
+  -access functions:
+    just trival function to act as getters or setters (doesn't have property like in c#)
+    eg:
+      int setDay(int day) {m_day = day;}
+      void getDay() {return m_day;}
+
+
+14.7
+  -returning data members by reference is usually valid and can be referenced as long as the object it is contained within is in the scope
+
+    const std::string& getName() const{return m_name;}
+  NOTE: refence lvalue return MUST ALWAYS BE CONSTANT! It will not cause compile error, but it's the best way to do it
+  NOTE: const member function cannot return non const reference of private member function, eg:
+    const std::string& getName() const{return m_name;} -> ok!
+    std::string& getName() {return m_name;} -> ok!
+    std::string& getName() const {return m_name;} -> compile time error!! 
+
+  -The return type of a member function returning a reference to a data member should match the data member’s type
+    that's why std::string& is preferred over std::string_view in above case cuz type conversion to std::string view would be required otherwise
+    we can also do:
+      const auto& getName() const(return m_name;)
+        but that can also make the return type ambigious so better tohave std::string& in this case
+  NOTE: return value from a function's rvalue and cannot be directly referenced unless it's copied into a local variable first
+
+    Employee createEmployee(std::string_view name)
+    {
+      Employee e;
+      e.setName(name);
+      return e;
+    }
+
+  the above "factory function" returns the employee object as r value
+
+  int main(){
+    Employee& e = createEmployee("Henry");
+    std::string_view ss = e.getName();
+    std::cout << ss;
+  }
+  this will cause compile time error as the object returned will be distroyed here:
+    Employee& e - createEmployee("Henry");
+    and e's now a dangling reference
+    instead do:
+      Employee e = createEmployee("Henry");
+
+  CLASS INVARIENT: conditions that must remain true throughout an object's lifetime for the object to be valid
+  NOTE: if it's possible for a function to be non member, it's better for it to be a non member and not have direct access to private members of a class.
+    BAD EXAMPLE:
+      #include <iostream>
+      #include <string>
+
+      class Yogurt
+      {
+          std::string m_flavor{ "vanilla" };
+
+      public:
+          void setFlavor(std::string_view flavor)
+          {
+              m_flavor = flavor;
+          }
+
+          const std::string& getFlavor() const { return m_flavor; }
+
+          // Worst: member function print() uses direct access to m_flavor when getter exists
+          void print() const
+          {
+              std::cout << "The yogurt has flavor " << m_flavor << '\n';
+          }
+      };
+
+      int main()
+      {
+          Yogurt y{};
+          y.setFlavor("cherry");
+          y.print();
+
+          return 0;
+      }
+
+      here print's direct access is unnecessary. If we modify the class, we probably need to modify print too.
+
+    class Yogurt
+    {
+        std::string m_flavor{ "vanilla" };
+
+    public:
+        void setFlavor(std::string_view flavor)
+        {
+            m_flavor = flavor;
+        }
+
+        const std::string& getFlavor() const { return m_flavor; }
+    };
+
+    // Best: non-member function print() is not part of the class interface
+    void print(const Yogurt& y)
+    {
+            std::cout << "The yogurt has flavor " << y.getFlavor() << '\n';
+    }
+
+    int main()
+    {
+        Yogurt y{};
+        y.setFlavor("cherry");
+        print(y);
+
+        return 0;
+    }
+
+    here print() is outside the class, and access private members thru a public getter.
+
+    Having non members allows for greater encapsulation cuz it provides less access to the private variables
+  
+
+  NOTE: best practice to usually store public members first, then protected and then private members in a class
+
+14.9
+  -Constructors do not create objects, usually initialize values and do some other set up things
+  -Constructors are:
+    -named same as the class including capitlization.
+    -does not include template format even if class is template type
+    -return type should be void
+    -should generally be public
+    -implicit argument conversion rules apply like normal function (like if u call a construct that takes a double with int, the int is converted to double implicitly and vice versa)
+    -cannot be const, cuz by designed it's meant to change the member variables of a object i.e change the "this"
+  -Constructors are designed to initiate the entire functions while setters are just for individual member variables.
+
+14.10
+  Member initialization via member intialization list:
+    class Foo{
+      int m_x {}; -> this initialization is ignored/ overrided by member list intialization below when the object is created
+      int m_y {};-> this initialization is ignored/ overrided by member list intialization below when the object is created
+    public:
+      void Foo (x, y) 
+              : m_x {x} 
+              , m_y {y}
+      {
+        std::cout << m_x << ", " << m_y;
+      }
+    }
+
+    int main(){
+      Foo foo {1, 2};
+    }
+  -the oder of initialization thru member list intiialization should be the oder in which the members were declared in the class
+  NOTE: best not to initialize a member with other members. Cuz if u do that in wrong order u might cause compile time error
+  NOTE: Doesn't matter if u use member initialization or initialize stuff inside the function, this works:
+            Foo foo {1, 2};
+    for both:
+      void Foo (x, y) 
+              : m_x {x} 
+              , m_y {y}
+      {
+        std::cout << m_x << ", " << m_y;
+      }
+    AND:
+      void Foo (x, y) 
+      {
+        m_x = x;
+        m_y = y;
+        std::cout << m_x << ", " << m_y;
+      }
+  NOTE: member list initialization is also initialization, it overides the default class initialization if a member variable has one
+      PREFER:
+      void Foo (x, y) 
+              : m_x {x} 
+              , m_y {y}
+      {
+        std::cout << m_x << ", " << m_y;
+      }
+      OVER:
+      void Foo (x, y) 
+      {
+        m_x = x;
+        m_y = y;
+        std::cout << m_x << ", " << m_y;
+      }
+      The lower case would not work if private members are constants and can only be initialized ONCE! (And thiere might be some overhead too but not sure abt that)
+  
+  NOTE: We generally want our class type to be the owner of all it's members, so even if it might be a little expensive DON'T HAVE A REFERENCE/ VIEWER TYPE AS A CLASS TYPE'S MEMBER!!
+
+          class ball {
+            std::string m_colour{}; -> could be std::string_view but don't make it be, cuz what if the org string goes out of reference while the obj is still there?
+            double m_radius{};
+
+          public:
+            const std::string &getcolour() const { return m_colour; }
+            double getradius() const { return m_radius; }
+
+            ball(std::string_view colour, double radius)
+                : m_colour{colour}, m_radius{radius} {}
+          };
+
+14.11
+  Default constructor and stuff:
+    -constructors can be overloaded like normal functions
+    -empty user defined constructor: constructor with no argument that does not assign to/ initialize any members
+      class Foo{
+        int m_x {1};
+        int m_y {2};
+        Foo(){ -> 
+          std::cout << m_x << m_y;
+        }
+      }
+    -explicitly defaulted default constructor;
+      class Foo{
+        int m_x {1};
+        int m_y {2};
+        Foo() = default;
+      }
+    -implicitly defaulted default constructor;
+      class Foo{
+        int m_x {1};
+        int m_y {2};
+        //implicitly defauted default constructor;
+      }
+  NOTE: both second and last cases above used to be considered aggregrates, now only the last one is considered aggregrate
+  NOTE: in case of both 
+    -implicitly defaulted default constructor AND
+    -explicitly defaulted default constructor:
+      the member variables are default/ zero initialized 
+    But with empty user defined constructor, the members are left as it is, and if the member is unitialized, then it will just have garbage value and will be left unitialized
+
+    Example:
+
+      class User
+      {
+      private:
+          int m_a; // note: no default initialization value
+          int m_b {};
+
+      public:
+          User() {} // user-defined empty constructor
+
+          int a() const { return m_a; }
+          int b() const { return m_b; }
+      };
+
+      class Default
+      {
+      private:
+          int m_a; // note: no default initialization value
+          int m_b {};
+
+      public:
+          Default() = default; // explicitly defaulted default constructor
+
+        int a() const { return m_a; }
+        int b() const { return m_b; }
+    };
+
+    class Implicit
+    {
+    private:
+        int m_a; // note: no default initialization value
+        int m_b {};
+
+    public:
+        // implicit default constructor
+
+        int a() const { return m_a; }
+        int b() const { return m_b; }
+  };
+
+  int main()
+  {
+      User user{}; // default initialized
+      std::cout << user.a() << ' ' << user.b() << '\n';
+
+      Default def{}; // zero initialized, then default initialized
+      std::cout << def.a() << ' ' << def.b() << '\n';
+
+      Implicit imp{}; // zero initialized, then default initialized
+      std::cout << imp.a() << ' ' << imp.b() << '\n';
+
+      return 0;
+  }
+
+  -Explicilty default constructor is useful when u wanna have an option for your class to be default/ zero intialized too:
+      class Fraction
+      {
+      private:
+          int m_numerator{ 0 };
+          int m_denominator{ 1 };
+
+      public:
+          Fraction() = default;
+          Fraction(int numerator, int denominator)
+              : m_numerator{ numerator }
+              , m_denominator{ denominator }
+          {
+          }
+
+          void print() const
+          {
+              std::cout << "Fraction(" << m_numerator << ", " << m_denominator << ")\n";
+          }
+      };
+
+14.12:
+  Delegate Constructors:
+    -calling a constructor without assigning, even inside member methods or other constructor creates a teporary object:
+        private:
+            std::string m_name { "???" };
+            int m_id { 0 };
+            bool m_isManager { false };
+
+        public:
+            Employee(std::string_view name, int id)
+                : m_name{ name }, m_id { id } // this constructor initializes name and id
+            {
+                std::cout << "Employee " << m_name << " created\n"; // our print statement is back here
+            }
+
+            Employee(std::string_view name, int id, bool isManager)
+                : m_isManager { isManager } // this constructor initializes m_isManager
+            {
+                // Call Employee(std::string_view, int) to initialize m_name and m_id
+                Employee(name, id); // this doesn't work as expected! It just makes a temporary object does not initialize the complete constructor and return obj like we expect!
+            }
+
+            const std::string& getName() const { return m_name; }
+        };
+
+  -Delegating constructor:
+    class Employee{
+      std::string m_name{};
+      int m_id {};
+      bool m_manager {};
+    public:
+      Employee(std::string name, int id) : Employee {name, id, false}{}
+      Employee(std::string name, int id, bool manager)
+                              : m_name {name}
+                              , m_id {id}
+                              , m_manager {manager}
+      {
+        std::cout << "Employee created!";
+      }
+
+    }
+    Here, 
+      Employee(std::string name, int id) : Employee {name, id, false}{}
+      is the delegate constructor!
+  NOTE: A constructor can either delegate the initialization or initialize the object members itself. IT CAN'T DO BOTH!!
+        If u have multiple constructors, maybe use delegate constructor?
+  OR FOR above example u can just use default argument for constructor too:
+    class Employee{
+      std::string m_name{};
+      int m_id {};
+      bool m_manager {};
+    public:
+      Employee(std::string name, int id, bool manager = false)
+                              : m_name {name}
+                              , m_id {id}
+                              , m_manager {manager}
+      {
+        std::cout << "Employee created!";
+      }
+    }
+
+14.13
+  -you can make temporary class objects specially if you wanna give it as a parameter to some function
+    eg:
+      smfnc(IntPair {2, 3}); -> works!
+      OR
+      smfnc({2, 3}); -> as long as the parameter is IntPair it will implicity type deduct
+
+      works the same as:
+
+      IntPair p { 3, 4 };
+      smfnc(p);
+  Summary:
+    IntPair p { 1, 2 }; // create named object p initialized with { 1, 2 }
+    IntPair { 1, 2 };   // create temporary object initialized with { 1, 2 }
+    { 1, 2 };           // compiler will try to convert { 1, 2 } to temporary object matching expected type (typically a parameter or return type)
+    std::string { "Hello" }; //making a std::string temp obj adn initializing it with "Hello"
+  
+  -you can also make temporary objects with direct initialization stuff ->() BUT THIS IS HIGHLY DISCOURAGED DUE TO MOST VEXING PARSING STUFF
+  eg:
+    Foo (1); -> will make a temp class type obj and initialize it member with 1;
+    Foo (bar); -> creates a variable named bar with Foo type , like Foo bar;
+    Foo bar(); -> is a declrartion of a function named bar that returns Foo, NOT Foo bar {};
+    And soooo many more problems!!
+
+  ways to convert stuff (cast), when it's from one fundamental type to other do static_cast<> but when it's from one class type to other do:
+    std::string_view sv {"Hello"sv};
+    print(std::string {sv});
+      We prefer this cuz we are giving constructor the required value and asking it to look and convert to the thing we want
+
+14.14:
+  Copy Constructors:
+    -when we do:
+      Frac fra {1, 2};
+      Fraf f {fra}; 
+      We are basically initializing a copy constructor and f will now have a shallow copy of fra (or whatever's in the stack, if it's just int then all of it)
+
+    -copy constructor are like this:
+      class Frac{
+        int m_num {};
+        int m_deno {};
+      public: 
+        Frac(const Frac& f) : m_num {f.m_num}, m_deno {f.m_deno}{ -> overriding the copy constructor ourselves!
+          std::cout << "Copy created!!";
+        }
+      }
+
+    -whenever we pass an object by value we are basically calling a copy constructor. 
+      eg: let's take the class right above this:
+
+        Frac generateFrac(int a, int b){
+          Frac f {a, b};
+          return f;
+        }
+
+        void print(Frac f){...}
+
+        int main(){
+          Frac f {generateFrac(1, 2)};
+          print(f);
+        }
+      In this case the copy constructor will go off three times, first when value is returned form generateFrac, second when that value is copied to f and finally when fi s passed 
+        to print()
+
+    -generate default copy constructor:
+      Frac(const Frac& f) = default;
+    -disable/ delete copy constructor:
+      Frac(const Frac& f) = delete;
+  
+  NOTE: r value can only be assigned to const reference, cuz const reference extents it's lifetime. Non const objects does not have that effect!!
+  NOTE: for copy constructor we pass by reference not value cuz we need copy constructor to copy an object, so having to call a function while defining it will just make infinite
+        chains of calls
+
+14.15
+  -copy elison:
+    When you call a copy constructor to create an object, the compiler can optimize away the argument to the copy constructor and directly create the object.
+      eg:
+        Frac f {Frac {1, 2}};
+        could be direct optimizaed to:
+          Frac f{1, 2};
+      if it happens we say the parameter to copy constructor is elided away!
+
+    NOTE: this can cause changes in observable program effect so it's highly discouraged to modify the copy constructor and introduce some kind of side effect in it!
+
+14.16:
+  -converting constructors and explicit keyword
+    when we do:
+      class Foo{
+          int m_x {};
+          Foo(int x) : m_x {x}{
+          }
+        }
+
+      print (Foo f){
+        
+      }
+
+      int main(){
+          print(5);
+        }
+
+    5 will be implicitly converted to type Foo in print(5) through constructor Foo(int x)
+
+  -but this willnot work:
+      class Foo{
+          std::string m_x {};
+          Foo(std::string_view x) : m_x {x}{
+          }
+        }
+
+      print (Foo f){
+        
+      }
+
+      int main(){
+          print("Joe");
+        }
+      -cuz we need double conversion here, C-style string -> string_view -> Foo, only one step conversion works!!
+
+  -If we wanna prevent such conversions we use explicit keyword for constructor:
+      class Foo{
+          int m_x {};
+        public:
+          explicit Foo(int x) : m_x {x}{
+          }
+        }
+
+      print (Foo f){
+        
+      }
+
+      int main(){
+          print(5); -> now it's illegal
+        }
+    -same for returns too for explicity keyword:
+      #include <iostream>
+
+    class Foo
+    {
+    public:
+        explicit Foo() // note: explicit (just for sake of example)
+        {
+        }
+
+        explicit Foo(int x) // note: explicit
+        {
+        }
+    };
+
+    Foo getFoo()
+    {
+        // explicit Foo() cases
+        return Foo{ };   // ok
+        return { };      // error: can't implicitly convert initializer list to Foo
+
+        // explicit Foo(int) cases
+        return 5;        // error: can't implicitly convert int to Foo
+        return Foo{ 5 }; // ok
+        return { 5 };    // error: can't implicitly convert initializer list to Foo
+    }
+
+    int main()
+    {
+        return 0;
+      }
+
+  NOTE: For constructors that take single arguments, it' best to use explicit keyword for it when defining it!
+
+14.17
+  Constexpr aggregrates and class:
+    -A member function can be constexpr but for it to be evaluated at compile time we also need the corresponding object to be constexpr. If we tried assigning an expression with
+      constexpr member function but non constexpr object then compile time error
+    struct Pair{
+        int m_x {};
+        int m_y {};
+      
+        constexpr int sum() const{
+            return m_x + m_y
+        }
+      }
+
+      int main(){
+        Pair p {1, 2};
+        std::cout << p.sum();  -> works
+        constexpr int g {p.sum()}; -> compile time error! Obj's NOT constexpr
+        constexpr Pair q {1, 2};
+        constexpr int m = {q.sum()}; -> works!
+      }
+    NOTE: The above thingy only works for aggregrates! For classes doing as above will give compile type error saying q is not a literal type to be a constexpr. What's a literal is
+        is a little complex, but for userdefiend classes it must either be an aggregrate or have a constexpr constructor
+          eg:
+        class Pair // Pair is no longer an aggregate
+        {
+        private:
+            int m_x {};
+            int m_y {};
+
+        public:
+            Pair(int x, int y): m_x { x }, m_y { y } {}
+
+            constexpr int greater() const
+            {
+                return (m_x > m_y  ? m_x : m_y);
+            }
+        };
+
+        int main()
+        {
+            constexpr Pair p { 5, 6 };       // compile error: p is not a literal type
+            std::cout << p.greater() << '\n';
+
+            constexpr int g { p.greater() };
+            std::cout << g << '\n';
+
+            return 0;
+        }
+    
+
+    -A brief category of literal types:
+      Scalar types (those holding a single value, such as fundamental types and pointers)
+      Reference types
+      Most aggregates
+      Classes that have a constexpr constructor
+
+    -The fix for above is just to make the constructor a constexpr:
+        #include <iostream>
+
+        class Pair
+        {
+        private:
+            int m_x {};
+            int m_y {};
+
+        public:
+            constexpr Pair(int x, int y): m_x { x }, m_y { y } {} // now constexpr
+
+            constexpr int greater() const
+            {
+                return (m_x > m_y  ? m_x : m_y);
+            }
+        };
+
+        int main()
+        {
+            constexpr Pair p { 5, 6 };
+            std::cout << p.greater() << '\n';
+
+            constexpr int g { p.greater() };
+            std::cout << g << '\n';
+
+            return 0;
+        }
+
+    NOTE: implicitly defaulted default constructor are constexpr by default, but for explicitly defaulted constructor they must be constexpr explicitly!
+      constexpr Foo() = default;
+    NOTE: When a constexpr function is evaluating in a compile-time context, only constexpr functions can be called.
+    NOTE: In C++11 contexpr member functions were implicitly const by default i.e you couldn't change "this". But stating C++14, that's no longer the case.
+    -So starting C++14:
+          constexpr int greater() const // constexpr and const
+          {
+              return (m_x > m_y  ? m_x : m_y);
+          }
+
+          constexpr void reset() // constexpr but non-const
+          {
+              m_x = m_y = 0; // non-const member function can change members
+          }
+
+    NOTE: A really really weird case:
+      constexpr Pair zero()
+      {
+          Pair p { 1, 2 }; // p is non-const
+          p.reset();       // okay to call non-const member function on non-const object
+          return p;
+      }
+      Here, p and p.reset will be computed at compile time as long as Pair's constructor and Pair::reset() both are of constexpr type!
+      So when u call zero onto a constexpr fnc (forcing it at compile time), it can go and do it!
+    NOTE: A constexpr expression does not need to be initialized with a literal or a const value, what we need is a constant value i.e a value that can be generated at compile time
+      so even tho zero() is NOT a const, we can still do:
+        constexpr Pair q {zero()}; ->(this will prob prompt the compiler to do some copy elision and elide away the unnecessary stuff)
+
+
+    -constexpr const member function returning a const reference
+      constexpr const int& getX() const { return m_x; }
+
+    -constexpr const member function returning const pointer that's a const:
+      constexpr const int* const getX() const {return &m_x;}
+
+
+NOTE: Temporary objects can also be called anonymous objects 
+NOTE: One exception of as if rule is copy elision
+        
+  
+
+
+
+
+

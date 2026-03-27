@@ -1,0 +1,518 @@
+15.1:
+  -we can use this keyword too:
+    this->m_x
+  -if simple is some object of type Simple then:
+    simple.print(); gets compiled to: Simple::print(&simple);
+    and the correspoinding member function:
+    print() gets compiled to : print(Simple* this);
+  -don't need this time, but there are some situation, like these(more after this):
+    -to make member variable assignment disambigious
+      struct Something
+      {
+          int data{}; // not using m_ prefix because this is a struct
+
+          void setData(int data)
+          {
+              this->data = data; // this->data is the member, data is the local parameter
+          }
+      };
+    -function chaining by returning *this
+      class Num{
+        int m_x {};
+      public:
+        Num(int x) : m_x{x}{}
+        Num& add (int val){m_x += value; return *this;}
+        Num& sub (int val){m_x -= value; return *this;}
+        Num& mul (int val){m_x *= value; return *this;}
+      }
+      int main(){
+      Num num {1};
+      num.add(1).sub(2).mul(3); -> returning of this allows member funcction chaining
+      return 0;
+      }
+    -for resetting an object:
+      -having a member function like this might be useful at times:
+        void reset(){
+          *this = {}; -> make sure the constructors match tho
+        }
+  -for non const member functions this is a const pointer pointing to non const values
+    for const member functions this is a const pointer pointing to const values
+  NOTE: Calling a non const member function from a const object will result in compiler error
+
+15.2:
+  Classes and headers:
+    -We can have class member function declaration inside class block and the actual definition outside the block.
+      eg:
+        class Num {
+          int m_x{};
+
+        public:
+          Num(int x);
+          void printNum() const;
+          void add(int v);
+          void sub(int v);
+          int getX() {return m_x;}
+        };
+        Num::Num(int x) : m_x{x} {}
+        void Num::printNum() const { std::cout << m_x; }
+        void Num::add(int v) { m_x += v; }
+        void Num::sub(int v) { m_x -= v; }
+    
+    -Now,if we wanna use the class in multiple cpp files, we can have:
+          class Num {
+            int m_x{};
+
+          public:
+            Num(int x) : m_x{x} {}
+            void printNum() const;
+            void add(int v);
+            void sub(int v);
+            int getX() {return m_x;}
+          };
+        in Num.h file and this:
+
+          void Num::printNum() const { std::cout << m_x; }
+          void Num::add(int v) { m_x += v; }
+          void Num::sub(int v) { m_x -= v; }
+
+        in Num.cpp file
+      that way we can include Num.h in every file we want and compile Num.cpp with a file of our choosing
+      
+  NOTE: member functions are inline by default so:
+      int getX() {return m_x;}
+      will not cause ODR error even if it's a definition and can be included in multiple files with header as long as the definition is the saem everywhere
+
+  NOTE: member functions declared outside the class are not implicitly inline so should be (and usually is) defined in code file
+  
+  NOTE: WHile legal to have all definition inside class and include it in header, if we had to change something in some member function we have to recomiplie every file where the 
+        header's included as opposed to just changing one .cpp file and just relinking everything (even better if dynamic linking!)
+
+  NOTE: DEFAULT ARGUMENTS FOR A FUNCTION (MEMBER OR NON-MEMBER) SHOULD ONLY BE PUT IN DECLARAION UNLESS THERE'S NO DECLARAION, THEN IT CAN BE PUT IN DEFINITION
+
+  NOTE: we can use #pragma once to have our definition only appear once, just do #pragma once, it's magic!!
+
+15.3
+  Nested stuff:
+    -we can have enums and type alias (using keyword) as well as typedefs inside class
+    -we can have nested class, the inside class does not have access to 'this' keyword of the outer class, but it does have access to private members of outer class!
+        class Employee
+        {
+        public:
+            using IDType = int;
+
+            class Printer
+            {
+            public:
+                void print(const Employee& e) const
+                {
+                    // Printer can't access Employee's `this` pointer
+                    // so we can't print m_name and m_id directly
+                    // Instead, we have to pass in an Employee object to use
+                    // Because Printer is a member of Employee,
+                    // we can access private members e.m_name and e.m_id directly
+                    std::cout << e.m_name << " has id: " << e.m_id << '\n';
+                }
+            };
+
+        private:
+            std::string m_name{};
+            IDType m_id{};
+            double m_wage{};
+
+        public:
+            Employee(std::string_view name, IDType id, double wage)
+                : m_name{ name }
+              , m_id{ id }
+              , m_wage{ wage }
+      {
+      }
+
+      // removed the access functions in this example (since they aren't used)
+    };
+
+  -classes can be forward declared:
+    class outer;
+  NOTE: for outer declared class, there's a few restrictions:
+    -we can't have it initialized, we can only initialize it's pointer
+    -no calling any of it's members
+  -we can also forward declear nested classes inside it's outer:
+      class outer
+        {
+        public:
+            class inner1;   // okay: forward declaration inside the enclosing class okay
+            class inner1{}; // okay: definition of forward declared type inside the enclosing class
+            class inner2;   // okay: forward declaration inside the enclosing class okay
+        };
+      class outer::inner2{}
+  -can't declare nested class before the enclosing class's definition:
+      class outer;         // okay: can forward declare non-nested type
+      class outer::inner1; // error: can't forward declare nested type prior to outer class definition
+
+      class outer
+      {
+      public:
+          class inner1{}; // note: nested type declared here
+      };
+
+15.4
+  Destructors:
+    -called when a object is destoryed
+      class Simple
+      {
+      private:
+          int m_id {};
+
+      public:
+          Simple(int id)
+              : m_id { id }
+          {
+              std::cout << "Constructing Simple " << m_id << '\n';
+          }
+
+          ~Simple() // here's our destructor
+          {
+              std::cout << "Destructing Simple " << m_id << '\n';
+          }
+
+          int getID() const { return m_id; }
+      };
+    
+    -implicitly defined for functions where we do not define a destructor ourself or for aggregrates. The implicitly defined ones are just placeholders
+
+  NOTE: when we call std::exit() or when some unhanded exceptions happen, the stack unwinding will not take place. So with no stack unwinding the functions are not returned, the 
+        local variables are not called and destructors are not called!!
+
+15.5
+  NOTE: Templates paremeter list can be inside classes/ structs/ userdefined names but NOT inside functions!!
+
+    template <typename T>
+    class Pair{
+    private:
+      T m_first {};
+      T m_second {};
+    public:
+      Pair(T& first, T& second) : m_first{first}, m_second {second}{
+        }
+      bool isEqual(Pair<T>& pair);
+    }
+    template <typename T> //need another template parameter list here!!
+    bool Pair<T>::isEqual(Pair<T>& pair){
+      if(m_first == pair.m_first && m_second == pair.m_second) return true;
+      return false;
+    }
+  
+  -in above example, this is also valid:
+    template <typename T>
+    class Pair{
+    private:
+      T m_first {};
+      T m_second {};
+    public:
+      Pair(T& first, T& second) : m_first{first}, m_second {second}{
+        }
+      bool isEqual(Pair& pair); // Here Pair<T>& to Pair&
+
+    }
+    template <typename T> //need another template parameter list here!!
+    bool Pair<T>::isEqual(Pair& pair){ //Pair<T>& to Pair&
+      if(m_first == pair.m_first && m_second == pair.m_second) return true;
+      return false;
+    }
+  NOTE: this is only okay for member functions, for non member function that would be CATD in function parameter and that's explicitly illegal in C++!
+
+    bool isEqual(Pair& pair){ //ILLEGAL IF PAIR HAS TEMPLATE!!
+    }
+  NOTE: Template functions are also IMPLICITLY INLINE!
+  
+  NOTE: You not need to write <T> in constructor, so that's one extemption for matching class name with constructor's
+
+  NOTE: const objects can only called const member functions
+        if u wanna pass something by reference always make it a const in parameter type so the caller can pass reference too and the const reference parameter type will extent it's 
+          life time. Specially usefule for constructors!!
+          Triad(const T &x, const U &y, const V &z) : m_x{x}, m_y{y}, m_z{z} {}
+
+15.6
+  -static member variables are similar to global variables, the main diff being that it's scope is inside the classe class name and the scope resolution operator (in this case,   
+      Static::s_x):
+    struct Static {
+      static int s_x;
+    };
+    int Static::s_x{1};
+  -we should redeclare or optionally initialize the variable in global scope too
+  -doesn't matter if it's private or protected, the global initialization can still access the static member var
+    class Static {
+      static int s_x;
+    };
+    int Static::s_x{1};
+  -Some exceptions regarding above stuff, if static is inline, we can define it inside the class defn, but trying to do it outside again would be Redefinition and compiier will 
+      complain
+    class Static {
+      static inline int s_x;
+    };
+    int Static::s_x{1}; //ILLEGAL!!!
+  -Another exception: const integral types can also be defined inside class definition. Doing so outside would be illegal
+    class Static {
+      static const int s_x;
+    };
+    int Static::s_x{1}; //ILLEGAL!!!
+  -BUT for non intgral type consts, it's same as the first case:
+    class Static {
+      static const std::string s_x;
+    };
+    const std::string Static::s_x{1}; //ILLEGAL!!!
+  -static memers can have access modifier like any other members
+  NOTE: cuz constexpr's are implicitly inline, static member vairables of with this qualifier behave like the inline case
+  BEST PRACTICE: MAKE STATIC MEMBER VARIABLES INLINE OR CONSTEXPR!!
+  -Type deduction with auto and CTAD is allowed for static members (that are const/inline ) but not the normal ones:
+    class Foo{
+      auto m_i {5};//auto, not good
+      std::pair m_p {1, 2}; //CTAD, not good
+
+      static inline auto s_i {5};
+      static inline std::pair s_p {1, 2};
+    }
+  NOTE: for type deductions (through auto or CTAD), the corresponding variable needs to be initialized. HOwever that's not possible for static non-const/inline vars, so no type 
+        deduction for them!!
+        Type deduction is not allowed for normal member variables toos
+
+15.7
+  -static member functions : can only access other static member
+  -there is no static constructor
+  -does not get a this pointer
+  -can be defined ouside the class like non static member functions
+  -Pure static clases are very similar to namespaces, except the fact that they also have access specifiers
+  
+  -WAYS TO GET AROUND NOT HAVING A STATIC CONSTRUCTOR:
+    1 -> Just initialize everything at point of definition
+            #include <iostream>
+            struct Chars
+            {
+                char first{};
+                char second{};
+                char third{};
+                char fourth{};
+                char fifth{};
+            };
+
+            struct MyClass
+            {
+              static inline Chars s_mychars { 'a', 'e', 'i', 'o', 'u' }; // initialize static variable at point of definition
+            };
+
+            int main()
+            {
+                std::cout << MyClass::s_mychars.third; // print i
+
+                return 0;
+            }
+
+    2 -> make another generate() function that initializes sutuff for u
+            #include <iostream>
+            struct Chars
+            {
+                char first{};
+                char second{};
+                char third{};
+                char fourth{};
+                char fifth{};
+            };
+
+            class MyClass
+            {
+            private:
+                static Chars generate()
+                {
+                    Chars c{}; // create an object
+                    c.first = 'a'; // fill it with values however you like
+                    c.second = 'e';
+                    c.third = 'i';
+                    c.fourth = 'o';
+                    c.fifth = 'u';
+
+                    return c; // return the object
+                }
+
+            public:
+              static inline Chars s_mychars { generate() }; // copy the returned object into s_mychars
+            };
+
+            int main()
+            {
+                std::cout << MyClass::s_mychars.third; // print i
+
+                return 0;
+            }
+
+15.8:
+  Friend functions:
+    -friend functions are defined inside a class and has full access to that class
+    -one friend function can have multiple class friends
+
+      #include <iostream>
+
+      class Humidity; // forward declaration of Humidity
+
+      class Temperature
+      {
+      private:
+          int m_temp { 0 };
+      public:
+          explicit Temperature(int temp) : m_temp { temp } { }
+
+          friend void printWeather(const Temperature& temperature, const Humidity& humidity); // forward declaration needed for this line
+      };
+
+      class Humidity
+      {
+      private:
+          int m_humidity { 0 };
+      public:
+          explicit Humidity(int humidity) : m_humidity { humidity } {  }
+
+          friend void printWeather(const Temperature& temperature, const Humidity& humidity);
+      };
+
+      void printWeather(const Temperature& temperature, const Humidity& humidity)
+      {
+          std::cout << "The temperature is " << temperature.m_temp <<
+            " and the humidity is " << humidity.m_humidity << '\n';
+      }
+
+      int main()
+      {
+          Humidity hum { 10 };
+          Temperature temp { 12 };
+
+          printWeather(temp, hum);
+
+          return 0;
+      }
+
+      NOTE that forward declaraion of one of the classes is required when doing multiple friends
+
+
+    -friend function can be defined inside the class, but it will still be considered just a friend, not a member:
+      #include <iostream>
+      class Accumulator
+      {
+      private:
+          int m_value { 0 };
+
+      public:
+          void add(int value) { m_value += value; }
+
+          // Friend functions defined inside a class are non-member functions
+          friend void print(const Accumulator& accumulator)
+          {
+              // Because print() is a friend of Accumulator
+              // it can access the private members of Accumulator
+              std::cout << accumulator.m_value;
+          }
+      };
+
+      int main()
+      {
+          Accumulator acc{};
+          acc.add(5); // add 5 to the accumulator
+
+          print(acc); // call the print() non-member function
+
+          return 0;
+      }
+      
+      NOTE that we can call print() without mentioning the class at all!
+
+  -still generally prefer non friend function over friend function but lesser access to the class better
+
+15.9
+  Friend class and stuff:
+    -similar to friend function, a friend class can access all private members of the function granting it friendship
+    -it's a one way relationship unless both classes declare eachother as friends
+        class Storage{
+          int m_x {};
+          double m_y {};
+        public:
+          Storage(int x, int y) : m_x {x}, m_y {y}{}
+          friend class Display; -> declaring a friend
+        };
+
+        class Display{
+        public:
+          Display() = default;
+          void display(Storage& storage){
+            std::cout << storage.m_x << ", " << storage.m_y; -> can access private members
+          } 
+        };
+    
+    -friend member function: a little convulated but makes sense
+      class Storage; -> cuz we using Storage reference
+      class Display{
+      public:
+        Display() = default;
+        void display(Storage& storage); -> can't use stuff in Storage here cuz those stuff haven't been declared yet
+      };
+
+      class Storage{
+        int m_x {};
+        double m_y {};
+      public:
+        Storage(int x, int y) : m_x {x}, m_y {y}{}
+        friend class Display::display(Storage& storage); -> declaring a friend
+      };
+      void Display::display(Storage& storage){
+        std::cout << storage.m_x << ", " << storage.m_y; -> can access private members
+      } 
+
+15.10
+  NOTE: It's dangerous to use a rvalue object as a means to access the data memebers of that object. Becuase the lifetime of that object is only within that expression, so unless u
+          copy that value, or the function giving access returns by value, just having a const reference of that value is not enough. As it will be destroyed once the object is
+          destroyed
+            int num = {Frac{1, 2}.getDeno()}; -> if getDeno returns by reference, num is fucked
+        A better examaple:
+            #include <iostream>
+            #include <string>
+            #include <string_view>
+
+            class Employee
+            {
+            private:
+              std::string m_name{};
+
+            public:
+              Employee(std::string_view name): m_name { name } {}
+              const std::string& getName() const { return m_name; } //  getter returns by const reference
+            };
+
+            // createEmployee() returns an Employee by value (which means the returned value is an rvalue)
+            Employee createEmployee(std::string_view name)
+            {
+              Employee e { name };
+              return e;
+            }
+
+            int main()
+            {
+              // Case 1: okay: use returned reference to member of rvalue class object in same expression
+              std::cout << createEmployee("Frank").getName() << '\n';
+
+              // Case 2: bad: save returned reference to member of rvalue class object for use later
+              const std::string& ref { createEmployee("Garbo").getName() }; // reference becomes dangling when return value of createEmployee() is destroyed
+              std::cout << ref << '\n'; // undefined behavior
+
+          return 0;
+        }
+  -To mitigate the above stuff we have ref-qualifiers
+        const std::string& getName() const &  { return m_name; } //  & qualifier overloads function to match only lvalue implicit objects, returns by reference
+        std::string        getName() const && { return m_name; } // && qualifier overloads function to match only rvalue implicit objects, returns by value
+        -the one with & will return when the implicit object passed is a lvalue
+        -the one with && will return when the implicit obj passed is rvalue
+      -BUT THIS IS NOT RECOMMENDED TO BE USED
+      -JUST ACCESS DATA MEMBERS BY LVALUE - ALWAYS!!!
+
+NOTE: Member functions defined inside a class template definition can use the template parameters of the class template itself. Member functions defined outside the class template definition must resupply a template parameter declaration, and should be defined (in the same file) just below the class template definition.
+
+
+
+
+
+

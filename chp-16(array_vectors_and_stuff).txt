@@ -1,0 +1,334 @@
+16.1:
+  -string is a container type in general programming terms but not in C++
+  -size's for size of some object, length for length of a comtaier i.e size of char is 1byte, length of "Hello" is 5
+  -these are not considered containers in cpp:
+    c style string
+    std::string
+    std::vector<bool>
+  -3 types of array types:
+    c style array, naked array or fixed size array
+    std::array -> not used as much but more effecient ig?
+    std::vector -> most used
+
+16.2:
+  std::vector<type> empty {}; -> makes empty vector
+  std::vector<type> smthing (10); -> vector with space for 10 elements
+  std::vector<string> smthing (10, "hello"); -> vector with space for 10 elements and each element is "hello"
+  std::vector smthing (10, "hello"); -> vector with space for 10 elements and each element is "hello", type deduction with CTAD>
+  std::vector smthing {10, 10}; -> vector of type int with 2 variables both 10
+  std::vector<int> v(); -> a function declaration that returns std::vector, no parameter to be passed
+    NOTE: type deduction is not allowed in function return type
+        : Most vexing parse: If it can be a function, it is a function.
+  std::vector<int> v = 10; -> invalid. Only direct list and direct initialiation allowed, no copy initialiation
+  std::vector<int> v = {}; -> copy list initalization is valid
+
+  NOTE: DIRECT INITIALIZATION IS ILLEGAL FOR MEMBERS OF CLASS TYPE:
+        if we wnna do that for std::vector we gotta do this:
+        struct Foo{
+          std::vector<int> v {std::vector<int> (8)}; -> move constructor runs here so very cheap
+        }
+  -const vectors. The size of fixed and data inside the vector is unchanging
+  -a vector is called vector instead of array cuz it was misnamed
+
+NOTE: signed conversion is considered narrow conversion unless it's constexpr
+eg:
+  void foo(unsigned int)
+  {
+  }
+  int a {5};
+  unsigned int b {a}; -> compiler errorstd::size_t
+  foo(a); -> compile time error
+
+  constexpr int a {5};
+  constexpr unsigned int b {a}; -> compiles
+  foo(a); -> compiles
+
+  constexpr int a {-5};
+  constexpr unsigned int b {a}; -> compiler error
+  foo(a); -> compile time error
+
+NOTE; std::size_t is largest possible unsigned type
+      std::ptrdiff_t is largest possible signed type for thnctions to gete machine
+
+16.3
+  -subscript for vector is unsigned int
+  -two types of size:
+    std::size(obj) -> C++17
+    obj.size() ->older
+    the former is mostly for c style array, the latter is for actual classes like std::vector and stuff, both of their return type is unsigned int
+
+    std::ssize(obj) -> C++20, returns large signed int stuff, usually std::ptrdiff_t
+                    auto size = std::ssize(obj);
+
+  -operator[] does no bound checking when accessing
+  -.at() does runtime bound checking, throws std::out_of_range error
+  NOTE: .at() and operator[] both only deal in std::size_t (unsigned) type. Type conversion will occure when signed int is given which might give compiler warning
+      : we can use vector_obj.data()[] if we wanna use int cuz for std::vector::data() stores c style array and it can be indexed w both signed and unsigned
+  -size_type is a nested typedef that is an alias for the type used to store the length (and indices, if supported) of a standard library container.
+
+NOTE: CTAD is illegal as function parameter
+  void smting(std::pair a); -> illegal, you need the type too
+  void smthing(auto a); -> legal in c++20
+16.4
+  -we pass by reference:
+    void passByRef(std::vector<int>& s);
+    void passByRef(std::vector& a); -> illegal, CTAD not allowed here
+    we can u template:
+    template <typename T>
+    void passByRef(std::vector<T>& s);
+  
+    we can pass by generic template:
+    template<typename T>
+    void passByRef(const T& o);
+    in c++20 this works:
+    void passByRef(const auto& arr)
+
+NOTE: if you have to pass around an array type std::array might be a better option. Cuz std::array's size is constexpr i.e must be determined at compile time so if you are accessing
+      out of bound elements it can throw an error early
+      constexpr std::array<int, 3> items = {1, 2};
+      ERROR CASE:
+        #include <iostream>
+        #include <vector>
+
+        template <typename T>
+        void printElement3(const std::vector<T>& arr)
+        {
+            std::cout << arr[3] << '\n';
+        }
+
+        int main()
+        {
+            std::vector arr{ 9, 7 }; // a 2-element array (valid indexes 0 and 1)
+            printElement3(arr);
+
+            return 0;
+        }
+
+NOTE: if a class object has no name and you assign it to some value of the class type, it will mandatorily be elided (class elision)
+
+16.5
+  -for class types that are move capable and we prefer passing by reference and returning by value
+  -when we return a heavy type by value the compiler first type to elide away the value and do direct construction, ifthat's not possible the compiler performns move and finally
+    doese compy when all hope is lost
+
+16.6
+  -was jst about hw to loop array and stuff
+
+16.7
+  -INVALID CODE : cuz in the first for loop the index is unsigned and will never be neg, so it will go on forever or just crash
+    #include <iostream>
+    #include <vector>
+
+    template <typename T>
+    void printReverse(const std::vector<T>& arr)
+    {
+        for (std::size_t index{ arr.size() - 1 }; index >= 0; --index) // index is unsigned
+        {
+            std::cout << arr[index] << ' ';
+        }
+
+        std::cout << '\n';
+    }
+
+    int main()
+    {
+        std::vector arr{ 4, 6, 7, 3, 8, 2, 1, 9 };
+
+        printReverse(arr);
+
+        return 0;
+    }
+
+  -dependent names:
+    in cpp, if u wanna use some type that's behind a template class then u gonna use dependent type
+    eg:
+      template <typename T>
+      class ooo{
+        using ssss = T;
+        //some other tuff
+      }
+      
+      template <typename T>
+      int factory(){
+        typename ooo<T>::sss a {1}; -> here sss is a dependent type
+      }
+
+      int main(){
+        factory<int> ();
+      }
+
+      std::vector<T>::size_type IS A DEPENDENT NAME. if you don't have a concrete type T, then u gotta:
+        typename std::vector<T>::size_type a {1};
+      if u have a concrete type for T then prob don't need it
+        std::vector<int>::size_type a {1};
+  NOTE: you can't have template <typename T> above main()
+
+  -decltype:
+    to get the type of it's argumetn
+      std::vector<int> a {1, 2, 3};
+      decltype(a)::size_type a {2}; 
+    NOTE we need a to be the owner of it's data structure, a reference type would not work. 
+      If we have a ref type we gotta first remove that:
+        typename std::remove_reference_t<decltype(arr)>::size_type index { 0 };
+      here we need typename cuz decltype(arr)'s type's only known after initialiation
+
+  NOTE: if u gotta index a vector, do it thru it's raw c style array (.data()), else just don't do it and use other range type stuff
+
+16.8
+  -Best use auto for foreach loop:
+    #include <iostream>
+    #include <vector>
+
+    int main()
+    {
+        std::vector fibonacci { 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89 };
+
+        for (auto num : fibonacci) // compiler will deduce type of num to be `int`
+          std::cout << num << ' ';
+
+        std::cout << '\n';
+
+        return 0;
+    }
+
+  -best use const auto& for std::string type vectors, cuz copying them is expensive:
+    #include <iostream>
+    #include <string>
+    #include <vector>
+
+    int main()
+    {
+        std::vector<std::string> words{ "peter", "likes", "frozen", "yogurt" };
+
+        for (const auto& word : words) // word is now a const reference
+            std::cout << word << ' ';
+
+        std::cout << '\n';
+
+        return 0;
+    }
+
+  -use const auto& for type deduction in foreach loop like above. In some cases it might be better not to use type deduction for eg: for std::string_view, as std::string_view&   
+      worse, so if u have string type use std::string_view for std::string_view vector type and c style string and const auto&  for std::string
+  NOTE: this range based loop also works for other standard containers like non decayed c style array, std::array, linked list, hashed map etc
+  NOTE: decayed c style array -> pointer's pointing an array or array being passed as fnc arg, only the first element is passed in that instance, it's size is lost so foreach does 
+        not work
+  C++20: traversing an array in reverse (using range library)
+  #include <ranges>
+  #include <iostream>
+  #include <vector>
+  #include <string_view>
+
+  int main(){
+    std::vector <int> a {1,2, 3,4,5 ,6};
+    for(int b : std::views::reverse(a)){ -> spits out the vector in reverse
+        std::cout << b;
+    }
+  }
+
+16.9
+  Array indexing using unscoped enums: since their numbering's implicitly constexpr, having them convert to unsigned for array indexing would prevent any warning stuff
+    namespace Students
+  {
+    enum Names
+    {
+        kenny, // 0
+        kyle, // 1
+        stan, // 2
+        butters, // 3
+        cartman, // 4
+        max_students // 5
+    };
+  }
+  int main()
+  {
+      std::vector testScores { 78, 94, 66, 77, 14 };
+
+      testScores[Students::stan] = 76; // we are now updating the test score belonging to stan
+
+      return 0;
+  }
+
+  -we can also use non const-expr stuff, but gotta make the underlying type of the enum unsigned for that
+
+  namespace Students
+  {
+    enum Names: unsigned int
+    {
+        kenny, // 0
+        kyle, // 1
+        stan, // 2
+        butters, // 3
+        cartman, // 4
+        max_students // 5
+    };
+  }
+  int main()
+  {
+      std::vector testScores { 78, 94, 66, 77, 14 };
+      Students::Names name {Students::stan}; -> non constexpr BUT unsigned so fine!!
+
+      testScores[name] = 76; // we are now updating the test score belonging to stan
+
+      return 0;
+  }
+
+  -the last element in the about enum could be used as the counter (to count the number of element in the enum/ array)
+  -we can static_assert an array's/vector length using max_students during compile time (for constexpr arrays like std::array or fixed sized vector), or just assert for dynamic
+    ones ig
+  -we could also use enum class but they don't implicitly turn to unsigned even though they are constexpr unless u do static_cast, however that might just not be worth the hassle
+
+16.10
+  -std::vector is dynamic array, i.e. it can be resized.
+    std::vector<int> a {0, 1, 2};
+    a.resize(5); -> it becomes {0, 1, 2, 0 , 0}
+  NOTE: the newly allocated value's automatically default value initialized (zero initialized in case of int)
+  -.capacity() is a member function that give u capacity of a vector
+  -we can change decrease a vector's size using .resize but not it's capacity cuz reallocation is really expensive and the comp wants to avoid it as much as possible
+  NOTE: only the indexes that covers a vector length are valid. Even if capacity is more, going out of lenght's bound will cause error
+  -if we want vector's capacity to match it's length then we can use member function .shrink_to_fit(). But it's implementation defined and the implementation may decide to fulfill
+      the request or not
+    #include <iostream>
+    #include <vector>
+
+    void printCapLen(const std::vector<int>& v)
+    {
+      std::cout << "Capacity: " << v.capacity() << " Length:"	<< v.size() << '\n';
+    }
+
+    int main()
+    {
+
+      std::vector<int> v(1000); // allocate room for 1000 elements
+      printCapLen(v);
+
+      v.resize(0); // resize to 0 elements
+      printCapLen(v);
+
+      v.shrink_to_fit();
+      printCapLen(v);
+
+      return 0;
+    }
+
+16.11
+  few member functions for stack behaviour:
+    -push_back()
+    -emplace_back() -> like last one but if u wanna put in temp object, you can directly construct the object inside the stack
+    -pop_back()
+    -reserve() -> to increase capacity
+    -back() -> to peep at the last entry
+ 
+16.12
+  -std::vector<bool> is bad and you shouldn't use it
+  -basically stores 8 bool values every byte, performance is highly dependent on implementation
+  -won't work when type is bool:
+      template<typename T>
+      void foo( std::vector<T>& v )
+      {
+          T& first = v[0]; // get a reference to the first element
+          // Do something with first
+      }
+  NOTE:Favor constexpr std::bitset, std::vector<char>, or 3rd party dynamic bitsets over std::vector<bool>.
+
+NOTE: When ownership of data is transfered from one object to another, we say that data has been moved.

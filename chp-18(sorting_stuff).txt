@@ -1,0 +1,143 @@
+18.1:
+  -std::swap to swap contents of 2 variables
+    int x {1};
+    int y {2};
+    std::swap(x, y);
+  -selection sorting:
+    -choosing the smallest element and putting it in index 0
+    -choosing 2nd smalles element and putting it in index 1
+    -choosing 3nd smalles element and putting it in index 2
+    ....and so on until we are done.
+    Impl in C++:
+
+    template<typename T, std::size_t N>
+    void sel_sort(std::array<T, N>& arr){
+      int smallestIndx {};
+      for(std::size_t u{}; u < N; ++u){
+        smallestIndx{u}; 
+        for(std::size_t v{u + 1}; v < N; ++v){
+          if(arr[v] < arr[smallestIndx]{
+            smallestIndx = v;
+          }
+        }
+        std::swap(arr[u], arr[smallestIndx]);
+      }
+    }
+
+18.2
+  Intro to Iterators:
+  -an iterator is an object designed to traverse through containers
+  -different containers itself can porvide different kind of iterators
+  -pointers as iterators:
+        std::array arr{ 0, 1, 2, 3, 4, 5, 6 };
+        auto begin{&arr[0]};
+        auto end{&arr[0] + std::size(arr)}; //NOTE: Don't do &arr[std::size(arr)] cuz [] will do automatic dereferencing, and dereferencing an invalid pointer is BAD
+        for(auto ptr{begin}); begin != end; ++begin){
+          ...
+        }
+  NOTE: for noramal interations <= is preferred but for pointer iteration of a container != is preferred cuz our datatype in containers might no be able to interpret <= sign
+
+  -iteration stuff in stl:
+      std::array array{ 1, 2, 3 };
+      auto begin {array.begin()};
+      auto begin {array.end()};
+      for (auto p{ begin }; p != end; ++p) // ++ to move to next element.
+      {
+          std::cout << *p << ' '; // Indirection to get value of current element.
+      }
+  -we also have std::end and std::begin in <iterator> library or <array> or <vector> (or other containers too? Cuz they implement stuffin iterators)
+  -some operation on the iterator can invalidate the given container's iterator:
+    like for vector, it could be .erase(), .push_back() etc..
+      std::vector v{ 1, 2, 3, 4, 5, 6, 7 };
+      auto begin {v.begin()}; -> gives back iterator
+      ++begin;
+      std::cout << *begin;
+      v.erase(begin); -> .erase() takes in iterator and deletes it. NOw the iterator begin is invalidated
+      ++begin;-> UB
+    NOTE: .earse() returns the stuff next to the currently being erased stuff as iterator, so we cna do
+    `begin = v.erase(begin) instead to still have the begin iterator as valid!`
+
+18.3
+  <algorithm> stl:
+    -using std::find
+        std::array arr{ 13, 90, 99, 5, 40, 80 };
+        int search {};
+        int replace {};
+        std::cin >> search >> replace;
+        auto found{std::find(arr.begin(), arr.end(), search)}; -> takes 3 parameter, start iterator, end iterator and value tobe searched
+        *found = replace -> replacing the found iterator with given value
+        if(found == arr.end()){ -> in case the thing we want is not in the iterator the std::find will return ending of the container
+          std::cout << "Stuff NOT found"; 
+        }
+    -using std::find_if
+      similar to std::find, but as it's last parameter we give it some callable object like a function pointer or a lambda that can take in the container's values as arguments and
+        give truor false.
+
+      bool conatinsNut(std::string_view str){ -> returns true if nut substring is found
+        returns str.find("nut") != std::string_view::npos;
+      }
+      int main(){
+        std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+        auto found{std::find_if(arr.begin(), arr.end(), containsNut)};
+        if(found == arr.end()){
+          std::cout << "did not find";
+          return 0;
+        }
+        std::cout << "Found" << *found;
+      }
+    -using std::count and std::cout_if
+      (usage is similar to std::find and std::find_if)
+      eg:
+      bool conatinsNut(std::string_view str){ -> returns true if nut substring is found
+        returns str.find("nut") != std::string_view::npos;
+      }
+      int main(){
+        std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+        auto count{std::count_if(arr.begin(), arr.end(), containsNut)};
+        }
+        std::cout << "Counted" << count;
+      }
+    -about std::sort
+      normally arrange in ascending order:
+        std::sort(arr.begin(), arr.end());
+      we can use custom functions, this sorts in descending order:
+        bool greater(int a, int b){
+          return a > b;
+        }
+        std::srot(arr.begin(), arr.end(), greater);
+      use std::greater from <function>:
+        std::srot(arr.begin(), arr.end(), std::greater{});
+    -passing functions to our custom functions:
+      void sort(int* begin, int* end, std::function<bool(int, int)> compare)
+    -std::for_each
+      -we can pass the iterators  as well as the function we want each object in the respective contaier to go through:
+      void doubleNum(int& i){i *= 2; return 0;}
+
+      std::for_each(arr.begin(), arr.end(), doubleNum);
+
+NOTE: NOT ALL ALGORITH GURENTEE THE SEQUENCE IN WHICH STUFF ARE EXECUTED SO MAKE SURE TO CHECK THAT
+      A LOT OF ALGORITHMS HAVE PERFORMANCE GURENTEE MAKE SURE TO CHECK IT
+      C++20 adds ranges, which allow us to simply pass arr. This will make our code even shorter and more readable.
+
+18.4
+  Timing your code:
+  class Timer{
+  private:
+    using Clock = std::chrono::steady_clock;
+    using Second = std::chrono::duration<double, std::ratio<1>>;
+    
+    std::chrono::time_point<Clock> m_beg {Clock::now()}
+
+  public:
+    void reset(){
+      m_beg = Clock::now();
+    }
+    double elasped() const{
+      return std::chrono::duration_cast<Second>(Clock::now() - m_beg).count();
+    }
+  }
+  int main(){
+    Timer t;
+    std::cout << "Time elasped : " << t.elasped() << " seconds\n";
+    return 0;
+  }
