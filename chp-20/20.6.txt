@@ -1,0 +1,226 @@
+NOTE: IN CPP NESTED FUNCTIONS ARE ILLEGAL, SO LAMBDAS ARE NOT FUNCTION POINTER TYPE, THEY ARE FUNCTORS AND NOT VISIBLE TO USER, USE AUTO INSTEAD TO ASSIGN THEM TO VARS
+      THEY ARE FUNCTORS, FUNCTORS ARE OBJECTS WITH OVERLOADED operator() MAKING THEM CALLABLE!
+-lambda syntax:
+    [captureCaluse] (parameters) -> return type
+    {
+      statements;
+    }
+    
+    captureCaluse -> can be empty if u don't wanna capture any outer variables
+    parameters -> can be empty if u don't have anything to put in
+    return type -> can be left out, will be auto by default
+-most trival lambda syntax:
+  int main(){
+  [] {};
+  }
+-example:
+      int main(){
+        constexpr std::vector<std::string_view, 4> arr {"apple", "banana", "coke", "walnut"};
+        auto found{std::find_if(arr.begin(), arr.end(),
+                                [](std::string_view str) {
+                                  return str.find("nut") != std::string_view::npos;
+                                }
+        )}
+        if (found == arr.end()){
+            std::cout << "Not found\n";
+            return 0;
+        }
+
+        std::cout << *found << " found this\n";
+        return 0;
+      }
+
+  ORIGINAL-ISH function for above:
+      #include <algorithm>
+      #include <array>
+      #include <iostream>
+      #include <string_view>
+
+      // Our function will return true if the element matches
+      bool containsNut(std::string_view str)
+      {
+          // std::string_view::find returns std::string_view::npos if it doesn't find
+          // the substring. Otherwise it returns the index where the substring occurs
+          // in str.
+          return str.find("nut") != std::string_view::npos;
+      }
+
+      int main()
+      {
+          constexpr std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+
+          // Scan our array to see if any elements contain the "nut" substring
+          auto found{ std::find_if(arr.begin(), arr.end(), containsNut) };
+
+          if (found == arr.end())
+          {
+              std::cout << "No nuts\n";
+          }
+          else
+          {
+              std::cout << "Found " << *found << '\n';
+          }
+
+          return 0;
+      }
+
+-we can also have lambdas inside a variable:
+  auto smFnc{ [] (std::string_view str){
+      returns str.find("nut") != std::string_view::npos;
+    }};
+
+-although lamdas are not function pointer or std::function type, they can be assigned to vars of such types as long as the capture clause is empty [] for former, fro std::function
+  something inside [] will work too:
+  double(*smFnc)(std::string_view){ -> not work if something was inside []
+                [](std::string_view str) {
+                  return str.find("nut") != std::string_view::npos;
+  }
+  OR
+  std::function smFnc{ -> works even if there's smthing inside []
+                [](std::string_view str) {
+                  return str.find("nut") != std::string_view::npos;
+  }
+-but auto is still the best ->works even if there's smthing inside []
+
+
+-Ways to pass a lambda into a function:
+  using std::function:
+      void repeat1(int repetitions, const std::function<void(int)>& fn)
+      {
+          for (int i{ 0 }; i < repetitions; ++i)
+              fn(i);
+      }
+
+
+  using function template
+      template<typename T>
+      void repead2(int repetations, const T& fn){
+          for (int i{ 0 }; i < repetitions; ++i)
+              fn(i);
+      }
+
+  using abbreviated function template (C++20)
+      void repead3(int repetations, const auto& fn){
+          for (int i{ 0 }; i < repetitions; ++i)
+              fn(i);
+      }
+
+  using fnc pointers (for lambdas with no captures)
+      void repead4(int repetations, void(*fn)(int)){
+          for (int i{ 0 }; i < repetitions; ++i)
+              fn(i);
+      }
+
+-NOTE: pre-C++20, parameter are not allowed to be of auto type UNLESS THE SAID PARAMETER ARE OF LAMBDAS. This was allowed starting c++14
+        THIS IS CALLED GENERIC LAMBDAS!!
+  constexpr std::array months{ // pre-C++17 use std::array<const char*, 12>
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    };
+  // Search for two consecutive months that start with the same letter.
+    const auto sameLetter{ std::adjacent_find(months.begin(), months.end(),
+                                      [](const auto& a, const auto& b) {
+                                        return a[0] == b[0];
+                                      }) };
+
+  BUT this might not be suitable for some cases, like when working with C style string,passing const auto& might make it std::string&, which will required c style string to first be
+      converted to std::string and std::string&, which will break performance
+    
+  NOTE: lambdas are always constexpr!
+        All std lib functions starting c++20 are constexpr
+  So we can have this as constexpr in c++20:
+    const auto sameLetter{ std::adjacent_find(months.begin(), months.end(),
+                                      [](const auto& a, const auto& b) {
+                                        return a[0] == b[0];
+                                      }) };
+
+-static variables in generic variables act the same way like static variable in function teplate:
+  each time a new type touches the lambda a new copy of it is initiated and along with it comes a new copy of the local barable
+  eg:
+      #include <algorithm>
+      #include <array>
+      #include <iostream>
+      #include <string_view>
+
+      int main()
+      {
+        // Print a value and count how many times @print has been called.
+        auto print{
+          [](auto value) {
+            static int callCount{ 0 };
+            std::cout << callCount++ << ": " << value << '\n';
+          }
+        };
+
+        print("hello"); // 0: hello
+        print("world"); // 1: world
+
+        print(1); // 0: 1
+        print(2); // 1: 2
+
+        print("ding dong"); // 2: ding dong
+
+        return 0;
+      }
+-return type deduction:
+  if we do return type deduction (by omitting it or using auto) we have to be explicitly clear about the typ we return. One double and one int will give bad results
+      BAD:
+
+          int main()
+          {
+            auto divide{ [](int x, int y, bool intDivision) { // note: no specified return type
+              if (intDivision)
+                return x / y; // return type is int
+              else
+                return static_cast<double>(x) / y; // ERROR: return type doesn't match previous return type
+            } };
+
+            std::cout << divide(3, 2, true) << '\n';
+            std::cout << divide(3, 2, false) << '\n';
+
+            return 0;
+          }
+      GOOD:p
+
+            int main() { // note: explicitly specifying this returns a double
+              auto divide{ [](int x, int y, bool intDivision) -> double {
+                if (intDivision)
+                  return x / y; // will do an implicit conversion of result to double
+                else
+                  return static_cast<double>(x) / y;
+              } };
+
+              std::cout << divide(3, 2, true) << '\n';
+              std::cout << divide(3, 2, false) << '\n';
+
+              return 0;
+            }
+
+-lots of function are avaibale in std library for general use: liek std::greater
+    #include <functional> // for std::greater
+
+    int main() {
+      std::array arr{ 13, 90, 99, 5, 40, 80 };
+
+      // Pass std::greater to std::sort
+      std::sort(arr.begin(), arr.end(), std::greater{}); // note: need curly braces to instantiate object
+
+      for (int i : arr)
+      {
+        std::cout << i << ' ';
+      }
+
+      std::cout << '\n';
+
+      return 0;
+    }

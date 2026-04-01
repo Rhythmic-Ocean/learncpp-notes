@@ -1,0 +1,161 @@
+Lambda Captures:
+  -To use a variable inside a lambda, the variable needs to meet the following:
+    -we can only use static (or thread local) identifier (including global or static) inside lambdas
+    -we can only use objects that are constexpr (implicitly or explicitly)
+  -Else we gotta capture it:
+    int main(){
+      std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+      std::cout << "search for: ";
+
+      std::string search{};
+      std::cin >> search;
+
+      // Capture @search                                vvvvvv
+      auto found{ std::find_if(arr.begin(), arr.end(), [search](std::string_view str) {
+        return str.find(search) != std::string_view::npos;
+      }) };
+    }
+  -Note!! The variables captured by lambdas are copies of the outer variables not the variables themselves!!
+  -although lambda look like function, they are just callable objectets, called functors
+  -Note!! Captures by values are consts by default, we need to be explicit if we wanna have it as mutable:
+    int main(){
+      int ammo {10};
+      auto shoot{
+          [ammo]()mutable{
+              --ammo;
+              std::cout << "Pew!" << ammo << " shot(s) left!";
+        }
+      };
+    }
+  -Note!! Captures if reference are mutable by default
+  -multiple captures can be taken by putting stuff in [] seperated by ,
+  -Default capture -> = means by value and & means by reference
+    the compiler automatically captures everything we use inside lambda by itself:
+        int main(){
+          int ammo {10};
+          auto shoot{
+              [&]()mutable{ //ammo's gonna be captured by reference, compiler's gonna do that for us
+                  --ammo;
+                  std::cout << "Pew!" << ammo << " shot(s) left!";
+            }
+          };
+        }
+  -We can mix default captures with normal captures, just can capture the same stuff twice AND default capture must come first:
+      int health{ 33 };
+      int armor{ 100 };
+      std::vector<CEnemy> enemies{};
+
+      // Capture health and armor by value, and enemies by reference.
+      [health, armor, &enemies](){};
+
+      // Capture enemies by reference and everything else by value.
+      [=, &enemies](){};
+
+      // Capture armor by value and everything else by reference.
+      [&, armor](){};
+
+      // Illegal, we already said we want to capture everything by reference.
+      [&, &armor](){};
+
+      // Illegal, we already said we want to capture everything by value.
+      [=, armor](){};
+
+      // Illegal, armor appears twice.
+      [armor, &health, &armor](){};
+
+      // Illegal, the default capture has to be the first element in the capture group.
+      [armor, &](){};
+  
+  -Defining new vars inside lambda (with capture):
+    int main(){
+      //sm stuff                                            v (COULD BE SOME OUTER VARIABLES TOO!!)
+      auto finiding{std::find_if(arr.begin, arr.end, [made {0}](){
+          //sm stuff
+        }{
+        })}
+    }
+
+  -Making a copy of a mutable lambda can cause unique problems:
+    int main(){
+      int count{};
+      auto smFnc{
+        [count]() mutable{
+            ++count;
+            std::cout << count;
+        }
+      };
+
+      anFnc(); ->1
+      auto anFnc{smFnc};
+      anFnc(); ->2
+      smFnc(); ->2
+      smFnc(); ->3
+    }
+    creates 2 different mutable lambda instances with it's own count instance with whatever count is at that instance.
+
+  -Note!!std::function and lambdas are not of the same type, so when passing lambda into a funciton that takes std::function or it's reference there will be some conversion:
+
+      void myInvoke(const std::function<void()>& fn)
+      {
+          fn();
+      }
+
+      int main()
+      {
+          int i{ 0 };
+
+          // Increments and prints its local copy of @i.
+          auto count{ [i]() mutable {
+            std::cout << ++i << '\n';
+          } };
+
+          myInvoke(count); -> some conversion and lambda will trun to std::function before being a reference. This will cause a new copy of the function sent out every time.
+          myInvoke(count);
+          myInvoke(count);
+          return 0;
+      }
+      prints 1 1 1
+
+    One option to remedy this is to immediatly turn the lambda into a std::function:
+
+      void myInvoke(const std::function<void()>& fn)
+      {
+          fn();
+      }
+
+      int main()
+      {
+          int i{ 0 };
+
+          // Increments and prints its local copy of @i.
+          std::function count{ [i]() mutable { // lambda object stored in a std::function
+            std::cout << ++i << '\n';
+          } };
+
+          myInvoke(count); // doesn't create copy when called
+          myInvoke(count); // doesn't create copy when called
+          myInvoke(count); // doesn't create copy when called
+
+          return 0;
+      }
+    Here, actual references would be sent out rather than just reference of the copies
+    another is to use std::reference_wrapper type, can be made using std::ref() [or std::cref() for const reference type]
+      
+        void myInvoke(const std::function<void()>& fn){
+          fn();
+        }
+        int main(){
+          int i{0};
+          auto count {[i]() mutable {
+              std::cout << ++i << '\n';
+          }};
+          myInvoke(std::ref(count));
+          myInvoke(std::ref(count));
+          myInvoke(std::ref(count));
+
+        }
+
+
+                    
+
+

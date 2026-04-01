@@ -1,0 +1,131 @@
+-When a function is referred by its name without the (), C++ converts it into a function pointer
+  #include <iostream>
+
+  int foo() // code starts at memory address 0x002717f0
+  {
+      return 5;
+  }
+
+  int main()
+  {
+      std::cout << foo << '\n'; // we meant to call foo(), but instead we're printing foo itself!
+
+      return 0;
+  }
+
+  here most compiler will print 1, unless the function pointer foo is null.
+  Some compiler can print the address of the function
+-declaring a function pointer:
+  int (*fncPtr)(); -> pointer fncPtr can be used to assign any function that returns int and takes no paramters
+                      this is non-const function pointer
+  int (*const fncPtr)() -> similar as above but const
+  Usage:
+    int foo(){
+      return 5;
+    }
+    int goo(){
+      return 5;
+    }
+    int main(){
+      int(*fncPtr)() {&foo};
+      fncPtr = &goo;
+      return 0;
+    }
+
+-you don't need & before the function name, a function name is implicity converted into func pointer if needed
+    int foo();
+
+    // function initializations
+    int (*fcnPtr5)() { foo }; // okay, foo implicitly converts to function pointer to foo
+
+-unlike for normal pointers, converting a function pointer to a void pointer is typically not supported by the standard, and implementation depedent
+
+    int foo();
+
+    // function initializations
+    int (*fcnPtr5)() { foo }; // okay, foo implicitly converts to function pointer to foo
+    void* vPtr { foo };       // not okay, though some compilers may allow
+-can be initialized with nullptr:
+  int (*fcnptr)() { nullptr }; // okay
+
+-calling a function thru pointer:
+  (*fncPtr)(5); -> explicit dereferencing
+  fncPtr(5); -> implicit dereferencing
+-good idea to assert for no nullptr just in case!
+
+-not possible to utilize the default arg feature of a function with default argument:
+  #include <iostream>
+  void print(int x, int y = 10)
+  {
+      std::cout << "print(int, int)\n";
+  }
+  int main()
+  {
+      using vnptr = void(*)(int, int); 
+      vnptr pi { print }; 
+      pi(1);  -> 2 args expected: error
+      static_cast<void(*)(int, int)>(print)(1);  -> 2 args expected: error
+      return 0;
+  }
+
+  So one advantage of this is we can use it to differentiate between ambigious functions that take 2 args with 1 being default and and another function with the same name and return
+    type but with 1 args, not default
+    eg:
+        #include <iostream>
+
+        void print(int x)
+        {
+            std::cout << "print(int)\n";
+        }
+
+        void print(int x, int y = 10)
+        {
+            std::cout << "print(int, int)\n";
+        }
+
+        int main()
+        {
+        //    print(1); // ambiguous function call
+
+            // Deconstructed method
+            using vnptr = void(*)(int); // define a type alias for a function pointer to a void(int) function
+            vnptr pi { print }; // initialize our function pointer with function print
+            pi(1); // call the print(int) function through the function pointer
+
+            // Concise method
+            static_cast<void(*)(int)>(print)(1); // call void(int) version of print with argument 1
+
+            return 0;
+        }
+
+-passing a function to another function
+  void smFnc(int a, int b, void (*fncPtr)(int, int)){
+    //do stuff
+  }
+  void passFnc(int a, int b){
+    //do smthing
+  }
+  int main(){
+  smFnc(1, 2, passFnc); 
+  }
+
+-we can have function parameter as default arg too:
+  void selectionSort(int* array, int size, bool (*comparisonFcn)(int, int) = ascending);
+
+-making fncPtr preeter:
+  bool pointer (int a, int b){
+
+  }
+  using ValidateFunction = bool(*)(int, int);
+  ValidateFunction fncPtr = pointer;
+
+-using std::function<> to define function pointer types:
+  bool pointer (int a, int b){
+  //do stuff
+  }
+  std::function<bool(int, int)> fncPtr = pointer;
+
+-type inference for fnc ptrs:
+	auto fcnPtr{ &foo };
+
+NOTE: when fnc pointer is only needed once used std::function, if needed to be defined in mulitple places, do type aliaas for std::function

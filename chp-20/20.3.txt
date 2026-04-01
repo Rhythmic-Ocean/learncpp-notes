@@ -1,0 +1,14 @@
+-tail call optimization:
+  -for tail call recursion
+    it's when the calling happens as the absolute last instruction of the function with no extra calcuation:
+      NOT TAIL CALL:
+        int factorial(int n) {
+            if (n <= 1) return 1;
+            return n * factorial(n - 1); // Not a tail call cuz there's n* operation happening
+        }
+      TAIL CALL:
+      int factorial_tail(int n, int accumulator = 1) {
+          if (n <= 1) return accumulator;
+          return factorial_tail(n - 1, n * accumulator); // Tail call, nothing except recusive call
+      }
+  -the compiler can optimize this away in favour of a simple iteration loop on doing -O2 or -O3 optimization.

@@ -1,0 +1,79 @@
+
+NOTE: LOOK INTO FOLD EXPRESSIONS INSTEAD OF THIS IF U R DOING CPP
+-elipsis:
+  return_type fnc_name(arg_list, ...);
+    arg_list -> one or more normal function parameters, a fnc using elipses has to have at least one or more normal parameter
+    ... -> no typechecking
+    #include<cstdarg>
+    double findAvg(int count,...){
+      int sum{0};
+      va_list list; -> initialiting va_list, it is like a pointer that points to the elipses args
+      va_start(list, count); -> making list point to those arguments
+      for(int arg{0}, arg < count; arg++){
+        sum+=va_arg(list, int); -> accessing each argument in the list, each of them are int and va_arg auto moves forward
+      }
+      va_end(list); -> cleaning up
+      return static_cast<double>(sum)/count;
+    }
+-type safety is completly turned off and number of data type passed cannt be kept track of.
+-few ways to take care of the safety concern if u really have to use it:
+  -use a count like above
+  -use a sentinal value like elipses but has to end with a -1 eg:
+    double findAvg(int count,...){
+      int sum{0};
+      va_list list; -> initialiting va_list, it is like a pointer that points to the elipses args
+      va_start(list, count); -> making list point to those arguments
+      int num;
+      while((num = va_arg(list, int)) != -1){
+        sum+=num; -> accessing each argument in the list, each of them are int and va_arg auto moves forward
+      }
+      va_end(list); -> cleaning up
+      return static_cast<double>(sum)/count;
+    }
+  -OR my fav, use a decoder string like printf():
+      #include <iostream>
+      #include <string_view>
+      #include <cstdarg> // needed to use ellipsis
+
+      // The ellipsis must be the last parameter
+      double findAverage(std::string_view decoder, ...)
+      {
+        double sum{ 0 };
+
+        // We access the ellipsis through a va_list, so let's declare one
+        std::va_list list;
+
+        // We initialize the va_list using va_start.  The first argument is
+        // the list to initialize.  The second argument is the last non-ellipsis
+        // parameter.
+        va_start(list, decoder);
+
+        for (auto codetype: decoder)
+        {
+          switch (codetype)
+          {
+          case 'i':
+            sum += va_arg(list, int);
+            break;
+
+          case 'd':
+            sum += va_arg(list, double);
+            break;
+          }
+        }
+
+        // Cleanup the va_list when we're done.
+        va_end(list);
+
+      return sum / std::size(decoder);
+    }
+
+    int main()
+    {
+      std::cout << findAverage("iiiii", 1, 2, 3, 4, 5) << '\n';
+    std::cout << findAverage("iiiiii", 1, 2, 3, 4, 5, 6) << '\n';
+    std::cout << findAverage("iiddi", 1, 2, 3.5, 4.5, 5) << '\n';
+
+    return 0;
+  }
+      
