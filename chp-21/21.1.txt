@@ -1,0 +1,22 @@
+NOTE: program defined: defined my me the programmer using c++ + thrid party stuff
+    : user defined: everything program defined + things in standard library too
+    : only stuff built into the lanaguage are considered to be non of above
+Rules regarding Op overloading:
+  -some operators cannot be overloaded like:
+      conditional -> ?:
+      sizeof
+      scope -> ::
+      member selection -> .*
+      pointer member selection ->.*
+      typeid
+      casting operators
+  -cannot create new operators, only existing ones can be overloaded
+  -at least ONE of the operands must be user-defined. So, operator+(int, double); is not valid but operator+(int, std::string) is cuz standard library stuff are considered user
+    defined. However that's NOT recommended! 
+    So recommended that overloaded operator work on at least one program defined type
+  -NOT possible to change the number of operands an operator supports
+  -And all operators keep their default precendency and associativity regardless of how they are overloaded/ used
+
+Some guidelines:
+  -Operators that do not modify their operands (e.g. arithmetic operators) should generally return results by value.
+  -Operators that modify their leftmost operand (e.g. pre-increment, any of the assignment operators) should generally return the leftmost operand by reference.

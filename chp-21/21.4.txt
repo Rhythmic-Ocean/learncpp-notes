@@ -1,0 +1,39 @@
+Overloading I/O operators
+  -simiar to operator+, but with different input parameters and return type:
+    
+    std::ostream& operator<<(std::ostream& out, const Point& point){
+      out << "(" << point.x << ", " <<  point.y << ")" << std::endl;    
+      return out;
+    }
+
+  -we also have operator >> for input with similar stuff:
+    std::istream& operator>>(std::istream& in, Point& point){
+      in >> point.x >> point.y >> point.z;
+      return in;
+    }
+  
+  -partial extration guard: We need to have our operation as transaction (fully successufl or fully fail)
+    std::istream& operator>>(std::istream& in, Point& point){
+      double x{};
+      double y{};
+      double z{};
+      if(in >> x >> y >> z) -> if success then we overwrite point
+        point = Point{x, y, z};
+      return in;
+    }
+
+    if fail bit is switched then it should be handled by the caller not inside the operator
+
+  -manually setting failbit in case of semantically invalid inputs:
+
+    std::istream& operator>>(std::istream& in, const Point& point){
+      double x{};
+      double y{};
+      double z{};
+      in << x << y << z;
+      if(x < 0.0 || y < 0.0 || z < 0.0)
+        in.setstate(std::ios_base::failbit);
+      point = in?Point{x, y , z}: Point{};
+      return in;
+    }
+
