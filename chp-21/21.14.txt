@@ -1,0 +1,4 @@
+Overloading operators and function templates:
+  -if there's a function template and u wanna use it on a user defined class, first make sure every operators that's being used on this user defined class inside the function has been
+    overided, else compiler error will result.
+     (THAT'S IT JUST GO TO THE LESSON IF U WANNA SEE EXAMPLES!!!)

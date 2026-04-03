@@ -1,0 +1,67 @@
+Overloading assign operator: (should be done as member fnc too!)
+  -difference between copy constructor AND assign operator (since both use =)
+    the former happens when a new object is borh with the statement with = sign 
+    the latter happens no new object is born in the statement with = sign
+    eg:
+      class smCls{
+        int m_num{};
+      public:
+        smCls (int num): m_num{num}{} 
+        smCls(const smCls& mp): m_num{mp.m_num}{
+            std::cout<< "Copy constructor done\n";
+        }
+        smCls& operator=(const smCls& sm){
+          m_num = sm.m_num;
+          return *this; -> we return to allow for chained assignment or checks in if else : f1 = f2 = f3...
+        }
+      }
+      int main(){
+        smCls smsm {1};
+        smCls opop = smsm; -> copy constructor called
+        smCls oop {2};
+        oop = smsm; -> overloaded assign called
+      }
+
+  -problem with self-assignment (if the class contains dynamically allocated objects):
+    eg:
+      class smCls{
+        const char* m_str;
+        int m_len {};
+      public:
+        smCls (const char* str= NULL, int num): m_num{std::max(num, 0)}{
+            if(m_num){
+                m_str = new char[static_cast<std::size_t>(m_len)];
+                std::copy_n(str, num, m_str);
+              }
+          } 
+        smCls& operator=(const smCls& sm){
+          delete[] m_str;
+          m_num = sm.m_num;
+          m_str = nullptr
+          if (m_length):
+            m_str = new char[static_cast<std::size_t>(m_num)];
+          std::copy_n(sm.m_str, m_num, m_str)
+          return *this; -> we return to allow for chained assignment or checks in if else : f1 = f2 = f3...
+        }
+      }
+      int main(){
+        smCls smsm {"hell", 4};
+        smsm = smsm; -> the first line inside operator= is deleting the string, on doing that we have already made our object invalid breaking the program!
+      }
+
+      SO WE CHECK FOR SELF ASSIGNMENT!! [WE ONLY DO THiS TYPE OF CHECK IF THERE'S DELETE STUFF IN OUR OPERATOR=]
+        smCls& operator=(const smCls& sm){
+          if(&sm == this){
+              return *this;
+          }
+          delete[] m_str;
+          m_num = sm.m_num;
+          m_str = nullptr
+          if (m_length):
+            m_str = new char[static_cast<std::size_t>(m_num)];
+          std::copy_n(sm.m_str, m_num, m_str)
+          return *this; -> we return to allow for chained assignment or checks in if else : f1 = f2 = f3...
+        }
+
+  -the compiler provides with a default operator= that does member wise assignment we can disable it with:
+    Fraction(const Fraction &copy) = delete;

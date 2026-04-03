@@ -1,0 +1,18 @@
+-Postfix and prefix oerators:
+  -both do the same thing and have similar function signature so to differentiate between the two we give the postfix one an extra (int) so the compiler can differentiate between the
+    two
+  prefix overload:
+    class SmCls{
+      int m_num{};
+    public:
+      SmCls (int mum):m_num {mum}{}
+      SmCls& operator++(){return ++m_num;}
+    }
+  postfix overload: we have to send the old temporary verson back in this case
+    (for same class above):
+      SmCls operator++(int){
+        SmCls temp {*this};
+        ++(*this);
+        return temp;
+      }
+

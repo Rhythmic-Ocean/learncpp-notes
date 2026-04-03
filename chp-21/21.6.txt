@@ -1,0 +1,34 @@
+-Overloading unary operators +,-,!
+-we usually do it as member function:
+  class Cents{
+    int m_cents;
+  public:
+    Cents(int cents): m_cents {cents}{}
+    Cents operator-() const;
+    int getCents() const {return m_cents};
+  }
+
+  Cents Cents::operator-() const{
+    return m_cents; //implicitly gets converted to Cents with the non explicit constructor
+  }
+
+  int main(){
+    Cents nickle {5};
+    std::cout << "Hello " << (-nickle).getCents() << std::endl;
+  }
+
+-when doing ! operation we usually expect something binary (true/false or 0/1) so:
+  
+  class Points{
+    int m_x{};
+    int m_y{};
+    int m_z{};
+  public:
+    Points (int x, int y, int z): m_x{x}, m_y{y}, m_z{z}{}
+    bool operator!() const {}
+  }
+
+  //returns true if the points is in the origin
+  bool Points::operator!() const{
+    return {m_x == 0, m_y == 0, m_z == 0};
+  }

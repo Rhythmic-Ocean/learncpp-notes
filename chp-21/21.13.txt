@@ -1,0 +1,30 @@
+-Shallow Copying:
+  when u don't have a copy or operator= overloaded, the compiler will assign you a default one, but it will only do shallow copy (i.e member initialization). This works perfectly for
+    stuff which only has to worry about things in the stack, but if you have something to do with pointers address will be copied, the actual content in the heap will still be 
+    the same!! (for std::string the entire content will be copied cuz that's the default assign for this type)
+    Fraction(int numerator = 0, int denominator = 1, const char* smthing = NULL, int len = 0)
+        : m_numerator{ numerator }
+        , m_denominator{ denominator }
+        , m_smthing {smthing} -> JUST THE ADDRESS IS ASSIGNED [SHALLOW COPY!!]
+        , m_lem {len}
+    {
+    }
+
+    Fraction operator=(Fraction& fraction){
+      if(this != &fraction)
+        return *this;
+      m_numerator = fraction.m_numerator;
+      m_denominator = fraction.m_denominator;
+      m_smthing = fraction.m_smthing; -> also shallow copy
+      m_lem =fraction.m_len;
+      return *this;
+    }
+-Deep Copying:
+  A solution to above quandry would be to use deep copy (have manual operator= and copy constructor AND destructor that handles the class's members for u). See prev lesson's note to 
+    see this.
+
+-Rule of 3:
+  if a class needs user defined copy assign operator, destructor or a copy constructor then it needs all three to manage that member
+
+-A better solution (rule of 0):
+  just use classes like std::string, std::vector that can do dynamic allocations with lifetime automatically handlded by the standard libary

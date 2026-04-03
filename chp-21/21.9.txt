@@ -1,0 +1,117 @@
+Overloading subscript operators:
+  -a bit about how different types of variables are stored and used in a program:
+    vars in global namespace or static (non const) livei n .data 
+    const global or static live in .rodata section  
+    non const local vars ALWAYS live in the stack
+    const local also live in the stack but when u refer it later in the program the compiler might replace it with literal values eg:
+      const int a = 10;
+      std::cout << a; (compiler might replace it later with just 10 instead)
+  -a bit about const_cast<> casting
+    -it can be used to cast a variable as const or remove it's const
+    -turning a variable to const u can either use this or just make it const :
+      const int& a = x; -> recommended the latter is too overkil
+      OR
+      const int& a = const_cast<const int&>(x);
+    -removing a var's const-ness, this is really dangerous. If the const is a global or static, it's already in .rodata section so cannot be edited and will just give segfault
+      if it's a local constant and this can occur:
+      int& y = const_cast<int&>(a);  
+        this works but is really dangerous because something like this could happen:
+          const int a = 10;
+          int& ref {const_cast<int&>(a)};
+          ref = 20; -> changes value of a to 20
+          std::cout << a; -> compiler things a is a const so just replaces a with literal value (10)
+      removing constness is only suitable when the object u r removing constness for was born non const and became const along the way somewhere, like
+        int y = 10;
+        const int& ref = y;
+        int& z = const_cast<int&>(ref);
+
+  REMEMBER THE ABOVE BEFORE GOING BELOW!!
+
+    -we can overload subscript operator like this:
+      class smList{
+        int smlst[10] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+      public:
+        int& operator[](int num){ -> for assigning
+          return smlst[num];
+        }
+        const int& operator[](int num){ -> for getting the value
+          return smlst[num];
+        }
+      }
+
+    -however to make it not redundent we can do this:
+      class smList{
+        int smlst[10] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+      public:
+        int& operator[](int num){ -> for assigning
+          return const_cast<int&>(std::as_const(*this)[num]); -> will first call const [] version and turn it into non const and return that
+        }
+        const int& operator[](int num){ -> for getting the value
+          return smlst[num];
+        }
+      }
+
+  -detecting index validity:
+
+      class IntList
+      {
+      private:
+          int m_list[10]{};
+
+      public:
+          int& operator[] (int index)
+          {
+              if (!(index >= 0 && static_cast<std::size_t>(index) < std::size(m_list))
+              {
+                  // handle invalid index here
+              }
+              //or we can assert
+
+              return m_list[index];
+          }
+      };
+            
+  -the thing in [] DOES NOT need to be a integer:
+
+      class Stupid
+      {
+      private:
+
+      public:
+        void operator[] (std::string_view index);
+      };
+
+      // It doesn't make sense to overload operator[] to print something
+      // but it is the easiest way to show that the function parameter can be a non-integer
+      void Stupid::operator[] (std::string_view index)
+      {
+        std::cout << index;
+      }
+
+      int main()
+      {
+        Stupid stupid{};
+        stupid["Hello, world!"];
+
+        return 0;
+      }
+
+  NOTE!! See 21.9.1.cpp and answer why this might no work:
+
+      int main()
+      {
+        GradeMap grades{};
+
+        char& gradeJoe{ grades["Joe"] }; // does an emplace_back
+        gradeJoe = 'A';
+
+        char& gradeFrank{ grades["Frank"] }; // does a emplace_back
+        gradeFrank = 'B';
+
+        std::cout << "Joe has a grade of " << gradeJoe << '\n';
+        std::cout << "Frank has a grade of " << gradeFrank << '\n';
+
+        return 0;
+      }
+
+    cuz when we add new grades["Frank"] std::vector might relocate!! And the Joe's char& might be invalid!!!!!!!!!!!!!!!!!!!

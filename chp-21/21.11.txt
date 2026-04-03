@@ -1,0 +1,60 @@
+Overloading typecasts:
+  -we can have conversion constructors which can cast one type to the type of current class
+        class smcls{
+        public: 
+          int m_num {};
+          smcls(int num): m_num{num}{} -> now this constructor is a convertion constructor, can turn any int to smcls type
+        }
+        int oo(smcls ooo){
+          return  ooo.m_num;
+        }
+        int main(){
+          int ooooo = oo(2); -> 2 is implictly converted to smcla
+        }
+
+  -But we can only use it to convert type A to type B if we own type B, what if we wanted to do the other way around? Overloading typecast comes to save the day!!
+        class smcls{
+        public: 
+          int m_num {};
+          smcls(int num): m_num{num}{} -> now this constructor is a convertion constructor, can turn any int to smcls type
+          operator int(){return m_num;} -> convert smcls to int
+        }
+        int main(){
+          smcls mpmp {3};
+          int opop {mpmp};
+        }
+  -we can do so with user defined type too (like replacing int with some user defined type in above example)
+        class othercls{
+        public: 
+          double m_num {};
+          smcls(double num): m_num{num}{} -> now this constructor is a convertion constructor, can turn any int to smcls type
+          operator double(){return m_num;} -> convert othercls to double 
+        }
+        class smcls{
+        public: 
+          int m_num {};
+          smcls(int num): m_num{num}{} -> now this constructor is a convertion constructor, can turn any int to smcls type
+          operator int(){return m_num;} -> convert smcls to int
+          operator othercls(){
+              return static_class<double>(m_num); -> returning double is enough, will automatically convert to otherclass with implicit conversion
+            }
+        }
+  -just like explicit convertor constructor we also have explicit typecasts:
+        class othercls{
+        public: 
+          double m_num {};
+          smcls(double num): m_num{num}{} -> now this constructor is a convertion constructor, can turn any int to smcls type
+          explicit operator double(){return m_num;} -> convert othercls to double 
+        }
+        int main(){
+          othercls pp{2.2};
+          std::cout << pp; -> does not owrk as we don't have << overloaded and double conversion is explicit
+          std::cout << static_cast<double>(pp); -> WORKS!!
+          double mpop{static_cast<double>(pp)}; -> WORKS!!
+
+        }
+  -when to use converting constructor vs overloaded typecast:
+    -always prefer converting converting constructors whenever possible
+    -only reason to use overloaded typecast is if the type u want to convert cannot be edited by you
+    -if neither class be converted by you then use a non member class to do the conversion (implicit done would be impossible)
+    -ALWAYS USE EXPLICIT KEYWORD UNLESS YOU KNOW WHAT U R DOING AND WHY!!!!
