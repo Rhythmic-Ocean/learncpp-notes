@@ -1,0 +1,39 @@
+An option for overloaded operator= in case the object has some dynamic memory allocation going on:
+    using namespace std;
+
+    class GfG {
+        int size;
+        int* ptr;
+
+    public:
+        // Constructor
+        GfG(int s = 0) {
+            size = (s > 0) ? s : 0;
+            ptr = (size > 0) ? new int[size] : nullptr;
+        }
+
+        // Copy Constructor
+        GfG(const GfG& obj) {
+            size = obj.size;
+            ptr = (size > 0) ? new int[size] : nullptr;
+            copy(obj.ptr, obj.ptr + size, ptr);
+        }
+
+        // Swap function
+        friend void swap(GfG& obj1, GfG& obj2) {
+            using std::swap;
+            swap(obj1.size, obj2.size);
+            swap(obj1.ptr, obj2.ptr);
+        }
+
+        // Copy Assignment (Copy-and-Swap Idiom)
+        GfG& operator=(GfG obj) {
+            swap(*this, obj);
+            return *this;
+        }
+
+        // Destructor
+        ~GfG() {
+            delete[] ptr;
+        }
+    };

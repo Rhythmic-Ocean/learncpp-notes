@@ -1,0 +1,50 @@
+Control commands: 
+w - slide tile up
+a - slide tile left
+s - slide tile down
+d - slide tile right
+q - quit game
+
+A) What are the top-level things that your program needs to do? Here are a few to get you started:
+
+
+Board things:
+    Display the game board
+    use Random.h to randomize the orientation of the array maybe?
+    Maybe a 2D std::array<std::array<int, 4>, 4> (cuz number of stuff is fixed) as the template for the board, and you can give it an array of ints and 0 could represent the blank   
+      space
+    Display a new board with user's request implemented after each turn
+    Check for board's orientation after each turn in case the user succeed in the puzzle
+
+User things:
+
+    Get commands from user
+    Check if it's a valid one, else make them do it again (valid w, a, s, d, q)
+    Even if it's one of w, a, s, d, make sure the commnd is possible to be implemented, like you can accept a d(down) command if blank is at the top cuz there's nothing above to pull
+        down from
+    For the check in step 3, we can check where 0 is using std::find maybe, and see if it's in the corners and disable the command depending on which corner it is in
+    If everything seems fine, we can internally change the array's position and send the new board out to be displayed
+
+B) What primary classes or namespaces will you use to implement the items outlined in Step 1? Also, what will your main() function do?
+  
+  -class Board:
+         contains the main 2D std::array as member var, 
+         In constructor we pass a ref to a 2D array which can be used to initialize above memb var
+         maybe have a .view() member function to display the board
+         have a .audit() member function to check if it's solved
+         maybe a .move(char c) where char c is the command and we move accordingly
+         a .check_command() to check if given w, a, s, d is valid in given board's orientation
+  
+  -need a function that gives us random orientation for 15 different numbers
+
+  -main function
+    -declare 4x4 2D std::array matrix with all 0s
+    -have the random function help u initialize it in random orientation and use it to initialize a Board object
+    -use bord object's view to show player the board
+    -take and validate user's input
+    -check it one last time against board.check_command
+    -make a move with .move()
+    -check if games's over with .audit(), if yes break, else go back to step 3
+
+
+
