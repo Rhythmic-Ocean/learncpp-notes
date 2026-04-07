@@ -1,0 +1,73 @@
+22.1 — Introduction to smart pointers and move semantics
+(The below practice is a BAD practice)
+  -smart pointer -> pointers that clean up after themselves
+                    basically a class wrapped around a pointer that has a destructor with delete syntax inside of it
+        an impementation example:
+        template<typename T>
+        class Auto_ptr{
+          T* m_ptr {};
+        public:
+          Auto_ptr(T* ptr = nullptr): m_ptr{ptr}{}
+          ~Auto_ptr(){
+            delete m_ptr;
+          }
+          T& operator*() const{
+              return *mptr;
+          }
+        }
+        int main(){
+          Auto_ptr<int> sm= new int;  
+          std::cout << *sm; 
+          return 0;
+        } -> the int pointer is automatically destroyed
+
+
+    -some problems can come up when we try to move around the above object:
+        int main(){
+          Auto_ptr<int> sm= new int;  
+          Auto_ptr<int> sm1;
+          sm1 = sm; -> we have 2 instances of Auto_ptr pointing to same int* object in the heap, as default copy constructor/ assignment only does shallow copy
+          std::cout << *sm; 
+          return 0;
+        } -> both sm and sm1's destructor runs and we will have double free UB
+
+      -to solve this we can just delete the copy constructor and assignment overload stuff or we could instead implemet it ouselves to do deep copy, but that might be more expensive
+      OR WE USE MOVE SEMANTICS!!
+
+  -move semantics: transferring ownership of "resources" from one object to another, we basically overload the copy constructor and operator== to do this
+    example:
+
+        template<typename T>
+        class Auto_ptr{
+          T* m_ptr {};
+        public:
+          Auto_ptr(T* ptr = nullptr): m_ptr{ptr}{}
+          ~Auto_ptr(){
+            delete m_ptr;
+          }
+          T& operator*() const{
+              return *mptr;
+          }
+          Auto_ptr (Auto_ptr& a_ptr){
+            m_ptr = a_ptr.m_ptr;
+            a_ptr.m_ptr = nullptr;
+          }
+          Auto_ptr& operator=(Auto_ptr& a_ptr){
+            if(*this == a_ptr)
+              return;
+            m_ptr = a_ptr.m_ptr;
+            a_ptr.m_ptr = nullptr;
+            return *this;
+          }
+        }
+        int main(){
+          Auto_ptr<int> sm= new int;  
+          std::cout << *sm; 
+          return 0;
+        } -> the int pointer is automatically destroyed
+
+  -std::auto_ptr: we had this in c++98, got deprecated in c++17. Was basically the same as Auto_ptr we implmented about, but had a lot of problems (so does our Auto_ptr), like if we 
+    pass out pointer class to a function, the function will take ownership of the pointer and once it goes out of scope our pointer will go out of scope too. And trying to use it in 
+    caller will be UB
+    Another problem was std::auto_ptr always used non array delete, so any dynamically allocated array made with std::auto_ptr will not be deleted properly but we were allowed to  
+      make a dynamically allocated array with std::auto_ptr anyway

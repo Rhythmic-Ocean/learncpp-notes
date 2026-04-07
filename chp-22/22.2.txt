@@ -1,0 +1,38 @@
+22.2 — R-value references
+  -sm recap about l-value ref and const l-value ref
+    int y {3};
+    const z {4};
+    int& a {y}; -> l-valu non const ref can only ref other non const lvalu type. It cannot be reseated but we can change value of original value from reference
+    const int& b {y}; -> l-value const ref can reference non const l-value, const lvalue and r-value. Cannot be reseatd and value cannot be changed too
+    const int& c {z};
+    const int& b {5}; -> the lifetime of r-value is extended to be equal to the const r-value ref on left side
+
+  -about r-value
+    -can extend lifetime of r-value like l-value const reference but we can also change the value from the reference
+      int&& x{5};
+      x = 10; works!
+
+  -usually used to overload functions depending on r-value of l-value type passed
+    eg:
+    void fun(int& sm){
+      std::cout << sm;
+    }
+
+    void fun(int&& sum){
+      std::cout << sum << std::endl;
+    }
+
+    int main(){
+      int x {2};
+      fun(x); -> calls fun(int& sm)
+      fun(3); -> calls fun(int&& sum)
+    }
+
+  NOTE: R-VALUE REFERENCES ARE L-VALUE i.e
+    
+    int main(){
+      int&& x{2};
+      fun(x); -> will call fun(const int&)/ fun(int&) OVER fun(int&&), cuz once x becomes a variable, it's a l-value even tho it reference r-value (5)
+      fun(2); -> still prefers fun(int&&)
+    }
+

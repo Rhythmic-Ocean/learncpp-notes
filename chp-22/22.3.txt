@@ -1,0 +1,39 @@
+NOTE: std::swap also uses move constructos, so can't use to in move and swap idiom
+22.3 — Move constructors and move assignment
+  NOTE: copy constructors stuff are also called copy semantics apparantly
+  NOTE: when u call delete on an object, first it's destructor is called before the delete frees the memory it's hogging up
+  
+  -instead of overloading copy constructors to do moving job we can also have move constructors to solve some stuff from first chapter
+  -move constructors can be defiend with r-value parameters
+  eg:
+    Auto_ptr4(Auto_ptr4&& a) noexcept: m_ptr{a.m_ptr}{
+        a.m_ptr = nullptr;
+      }
+    
+  -we also have move assignment:
+    Auto_ptr4& operator=(Auto_part4&& a)noexcept{
+        if(*this == a)
+          return;
+        delete m_ptr;
+        m_ptr = a.m_ptr;
+        a.m_ptr = nullptr;
+
+        return *this;
+      }
+      }
+
+  -Note when we return from a function by value, move constructors get involved if:
+    -we don't have any user defined copy constructs OR if we have a user defined move constructor
+  -we usually wanna disable copying
+  -copy swap idiom version for move semantics. We make our custom swap function and swap stuff with stuff that's about to go out of scope:
+
+    Auto_ptr4(Auto_ptr4&& a) noexcept: m_ptr{a.m_ptr}{
+      swap(*this, a);    
+    }
+    friend swap(Auto_ptr4& thi, Auto_ptr& other){
+      std::swap(thi.m_ptr, a.m_ptr);
+    }
+  
+
+  -
+    

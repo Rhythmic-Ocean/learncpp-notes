@@ -1,0 +1,21 @@
+22.4 — std::move
+  -to turn a l-value obj into r-value object for moving purposes.
+  eg:
+    void SwapDis(int&x, int&y){
+      int temp = std::move(x);
+      x = std::move(y);
+      y = std::move(x);
+    }
+    std::swap does something like this, so better to have move stuff defined for our user defined type if we wanna use swap for them
+    
+  -we can use it to have our stuff in std::vectors or array added too:
+    std::string str { "Knock" };
+    std::vector<std::string> oo {};
+    oo.Add(std::move(str)); -> will move whatever's in str into oo's index   
+
+NOTE; when we move stuffs out of an object, c++ standard says the place we moved from will still have something valid left, usually default value (zero intiialized) but compiler can
+      put any "valid" value in it
+      Does not mean we shoudl touch it. For example, we shouldn't try and print str, but str is still a valid object, we can use it's various member function to play around, like
+        .empty() to check if it's empty and stuff
+      Overall, just use std::move if u wanna have it efficient but are pretty sure u don't want that value in that variable again. We can still reuse that var to assignt it something
+        else tho

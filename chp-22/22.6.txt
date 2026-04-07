@@ -1,0 +1,57 @@
+22.6 — std::shared_ptr
+  -unlike unique_ptr which is intended to be used to reference a piece of memory, shared_ptr holds a internal reference that keeps track of how many references it has and only
+    deallocates when it reaches 0
+  -like std::unique_ptr it also lives in <memory> header
+  eg:
+    int main(){
+      Resource* res {new Resource};
+      std::shared_ptr<Resource> ptr1 {res};
+      {
+        std::shared_ptr<Resource> ptr2 {ptr1};
+      } //ptr2 goes out of scope here but nothing happens
+      reutnr 0
+    }//ptr1 gets out of scope and Resource is finally deallocated
+  -but there is one extremly import caveat:
+    int main(){
+      Resource* res {new Resource};
+      std::shared_ptr<Resource> ptr1 {res};
+      {
+        std::shared_ptr<Resource> ptr2 {res}; //INSTEAD OF prt1!!
+      } //ptr2 goes out of scope here AND Resource GETS DEALLOCATED!!
+      reutnr 0
+    }//ptr1 gets out of scope and Resource is deallocated again (crashes!!)
+
+  -std::make_shared():
+    -similar to make_unique, but for shared_ptr
+      eg:
+      int main(){
+        auto ptr1 {std::make_shared<Resource>()};
+        {
+            auto ptr2 {ptr1};
+        }//ptr2 goes out of scope but nothing happens
+        return 0
+      }//ptr1 goes out of scope and Resource is deallocated
+
+  -some stuff about std::make_shared():
+    -it is about double the size of std::unique_ptr, one pointer is for payload, other points towards some content block that stores metadata about the payload, like how many  
+      references it currently has 
+    -when you do it like this:
+      Resouces* res {new Resource()}; 
+      std::shared_ptr ptr1 {res}; 
+
+      we have 2 allocation 8 bytes each, so takes longer
+
+    so we can instead use shared_ptr:
+      auto ptr1 {std::shared_ptr<Resource>()};
+
+      happens once and 16 bytes
+
+      when shared pointer is cloned using copy assignment, the content block is appropirately updated to show how many references the payload has
+
+  -we can make shared_ptr thru unique_ptr, cuz std::shared_ptr has a constructor that accepts std::unique_ptr r-value, so we can basically do std::move for that:
+      auto uq_ptr {std::make_unique<Resource>()};
+      std::shared_ptr ptr {std::move(uq_ptr)};
+  
+  -std::shared_ptr did not support arrays till c++17 (partial support), it does starting c++20
+
+

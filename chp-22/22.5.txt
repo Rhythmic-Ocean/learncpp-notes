@@ -1,0 +1,76 @@
+22.5 — std::unique_ptr
+  -similar to std::auto_ptr but with copy constructor disabled (so we can only move stuff around, and each unique_ptr's internal pointer is unique just to them)
+  -plus it can also handle dynamic arrays, but better just use std::array, vector and string instead of making c-style array dynamic and stuff
+  eg:
+    #include <iostream>
+    #include <memory> // for std::unique_ptr
+    #include <utility> // for std::move
+
+      class Resource
+      {
+      public:
+        Resource() { std::cout << "Resource acquired\n"; }
+        ~Resource() { std::cout << "Resource destroyed\n"; }
+      };
+
+      int main()
+      {
+        std::unique_ptr<Resource> res1{ new Resource{} }; // Resource created here
+        std::unique_ptr<Resource> res2{}; // Start as nullptr
+
+        std::cout << "res1 is " << (res1 ? "not null\n" : "null\n");
+        std::cout << "res2 is " << (res2 ? "not null\n" : "null\n");
+
+        // res2 = res1; // Won't compile: copy assignment is disabled
+        res2 = std::move(res1); // res2 assumes ownership, res1 is set to null
+
+        std::cout << "Ownership transferred\n";
+
+        std::cout << "res1 is " << (res1 ? "not null\n" : "null\n");
+        std::cout << "res2 is " << (res2 ? "not null\n" : "null\n");
+
+        return 0;
+      } // Resource destroyed here when res2 goes out of scope
+
+  -has overloaded * to dereference whatever it's pointing at the heap and -> works to point the dereferenced stuff's members if it's some kind of class/ struct
+
+  -std::make_unique<> (to make std::unique_ptr), like this we don't have to use new and manually allocate stuff:
+    auto myptr{std::make_unique<MyType>(2,3)}; -> (2,3) is the parameter we wanna bass to MyType's constructor
+    auto myptr1{std::make_unique<MyType[]>(5)}; -> allocates 5*sizeof(MyType)  amount of bytes and returns the value to myptr1
+
+  -there was a case before c++17 that would make some operations really bad with just std::unique_ptr (without std::make_unique), if u wanna see it:
+                                                                          https://www.learncpp.com/cpp-tutorial/stdunique_ptr/#smartpointerexceptionsafety
+
+  -safe and recommended to pass std::unique_ptr by value, it will either be elided or move semantics will happen
+
+  -passing std::unique_ptr by value to a function involves doing std::move() cuz copy semantics is disabled, and after u do that you unique_ptr variable in caller class no longer
+  owns the stuff u passed to the function. 
+      auto ptr{ std::make_unique<Resource>() };
+
+      //    takeOwnership(ptr); // This doesn't work, need to use move semantics
+          takeOwnership(std::move(ptr)); // ok: use move semantics
+
+  -we can also do passing by const reference but value or passing the pointer itself is preferred (we can use .get() to pass the pointer) 
+      eg:
+
+        auto ptr{ std::make_unique<Resource>() };
+
+        useResource(ptr.get()); // note: get() used here to get a pointer to the Resource
+
+  -we can have std::unique_ptr as a part of our class members too, but make sure the object is always properly destroyed otherwise std::unique_ptr may never be destoryed and we could
+    have memory leak
+
+
+Some stupid ways to misuse std::unique_ptr
+
+Resource* res{ new Resource() };
+std::unique_ptr<Resource> res1{ res };
+std::unique_ptr<Resource> res2{ res };
+
+AND
+
+Resource* res{ new Resource() };
+std::unique_ptr<Resource> res1{ res };
+delete res;
+
+

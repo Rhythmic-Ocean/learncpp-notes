@@ -1,0 +1,46 @@
+22.7 — Circular dependency issues with std::shared_ptr, and std::weak_ptr
+  -Problem of circular dependency with std::shared_ptr():
+    class smClass{
+    public:
+      std::shared_ptr<smClass> m_myself;
+      smClass(){}
+    } 
+    int main(){
+      auto myself {std::make_shared<smClass>()};
+      myself->m_myself = myself;
+    }
+
+    above is a very convulated circulr dependency. When main goes out of scope, auto myself goes out of scope too, but the object it's pointing at is still being pointed at by the
+      shared_ptr inside the class. So it can't be deallocated, so we have memory leak
+
+  -a solution for this is std::weak_ptr, a pointer that can point and access the content block of std::shared_ptr but cannot "own" i.e it's owning or not owing does not count in the
+    content block, and once all shared_ptr stop referencing this block of memory it will go away
+
+    class smClass{
+    public:
+      std::weak_ptr<smClass> m_myself;
+      smClass(){}
+    } 
+    int main(){
+      auto myself {std::make_shared<smClass>()};
+      myself->m_myself = myself;
+    }
+    now once auto myself goes out of scope tne object is freed
+
+  -problem with dangling std::weak_ptr:
+    unlike naked pointer, std::weak_ptr has access to content block so it will know when it's point to a invalid piece of memory, we can .expired() member function:
+      returns true if expired, false otherwise:
+      std::weak_ptr<smClass> oop(){
+        auto myself {std::make_shared<smClass>()};
+        std::weak_ptr<smClass> mmp{myself};
+        return myself;
+      }
+      int main(){
+        std::weak_ptr<smClass> mmp{oop()};
+        if(mmp.expired) std::cout << "False\n"; //PRINTS FALSE!!
+        return 0
+      }
+
+  -we can convert it into a shared_ptr using .lock():
+      std::shared_ptr<smClass> mmp{oop().lock()};
+  
