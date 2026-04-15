@@ -1,0 +1,86 @@
+25.8 — Virtual base classes
+  -solution to the diamond problem. this:
+
+      class PoweredDevice
+      {
+      public:
+          PoweredDevice(int power)
+          {
+          std::cout << "PoweredDevice: " << power << '\n';
+          }
+      };
+
+      class Scanner: public PoweredDevice
+      {
+      public:
+          Scanner(int scanner, int power)
+              : PoweredDevice{ power }
+          {
+          std::cout << "Scanner: " << scanner << '\n';
+          }
+      };
+
+      class Printer: public PoweredDevice
+      {
+      public:
+          Printer(int printer, int power)
+              : PoweredDevice{ power }
+          {
+          std::cout << "Printer: " << printer << '\n';
+          }
+      };
+
+      class Copier: public Scanner, public Printer
+      {
+      public:
+          Copier(int scanner, int printer, int power)
+              : Scanner{ scanner, power }, Printer{ printer, power }
+          {
+          }
+      };
+
+    here two instances will be made of PoweredDevice when we make an instance of Copier and when we then try to access something in PoweredDevice base class, we will get ambigious error cuz there's two
+      of them when accessed from Copier object
+
+  -virtual base class, basically telling the compiler no matter how many times this class appears in a single chain of inherence I only want once copy of it. eg:
+      class PoweredDevice
+      {
+      public:
+          PoweredDevice(int power)
+          {
+          std::cout << "PoweredDevice: " << power << '\n';
+          }
+      };
+
+      class Scanner: virtual public PoweredDevice // note: PoweredDevice is now a virtual base class
+      {
+      public:
+          Scanner(int scanner, int power)
+              : PoweredDevice{ power } // this line is required to create Scanner objects, but ignored in this case
+          {
+          std::cout << "Scanner: " << scanner << '\n';
+          }
+      };
+
+      class Printer: virtual public PoweredDevice // note: PoweredDevice is now a virtual base class
+      {
+      public:
+          Printer(int printer, int power)
+              : PoweredDevice{ power } // this line is required to create Printer objects, but ignored in this case
+          {
+          std::cout << "Printer: " << printer << '\n';
+          }
+      };
+
+      class Copier: public Scanner, public Printer
+      {
+      public:
+          Copier(int scanner, int printer, int power)
+              : PoweredDevice{ power }, // PoweredDevice is constructed here
+              Scanner{ scanner, power }, Printer{ printer, power }
+          {
+          }
+      };
+
+    here when we make an instance of copier class, the PoweredDevice is only formted once.
+    NOTE: Copier is responsible for initializing the powered device stuff too in this case

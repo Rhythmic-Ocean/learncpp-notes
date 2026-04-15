@@ -1,0 +1,51 @@
+25.1 — Pointers and references to the base class of derived objects
+  -using pointer/ reference to look at a derived object thru lens of it's base class
+
+  eg:
+
+      class Base
+      {
+      protected:
+          int m_value {};
+      public:
+          Base(int value)
+              : m_value{ value }
+          {
+          }
+          std::string_view getName() const { return "Base"; }
+          int getValue() const { return m_value; }
+      };
+      class Derived: public Base
+      {
+      public:
+          Derived(int value)
+              : Base{ value }
+          {
+          }
+          std::string_view getName() const { return "Derived"; }
+          int getValueDoubled() const { return m_value * 2; }
+      };
+      int main{
+        Derived d {5};
+        Base &rBase{derived};
+        Base* pBase{&derived};
+
+        std::cout << "pBase is a " << pBase->getName() << " and has value " << pBase->getValue();
+      } -> prints p Base is a Base and has value 5
+
+  -Usage, if we want to expand functionality of all inherit class that inherits from a base, we 
+    can just write that in the base class and execute it using base reference/pointer
+  -We can use this to overcome the type safety of array to have it store multiple types as long 
+    as it's from the same base class
+
+    int main(){
+      const Cat fred {"Fred"};
+      const Dog misty {"Misty"};
+      //c++20 has std::to_array<> where we can omit the size
+      const auto animals {std::to_array<const Animal*> {&fred, &misty}};
+      //before c++20 we have to have both type and size, we have to either omit both(C++17 CATD)
+        or have both, if we use CATD here the automatic template deduction will just deduce it as
+        &Cat and &Dog and give us error for having different types
+      const std::array<const Animal*, 6> animals{&fred, &misty}; 
+      
+    }

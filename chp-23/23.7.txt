@@ -1,0 +1,40 @@
+23.7 — std::initializer_list<>
+  it's to allow our types to be list initialized, like:
+    IntArray me {1, 2, 3, 4, 5..}; and no matter how many elements, it's good!! but has to be the same type, so a little limited than ... (but we have varandic template for that)
+    we need a constructor accepting std::initializer_list
+
+    MyInt(std::initializer_list<int> list) : m_len{list.size()}{
+      std::copy(list.begin(), list.end(), m_len); 
+    }
+
+  unfortunalitly we cannot directly access elements inside the std::initializer_list stuff with just [], we need to extract the interator with .begin() and then do []
+        IntArray(std::initializer_list<int> list) // allow IntArray to be initialized via list initialization
+          : IntArray(static_cast<int>(list.size())) // use delegating constructor to set up initial array
+        {
+          // Now initialize our array from the list
+          for (std::size_t count{}; count < list.size(); ++count)
+          {
+            m_data[count] = list.begin()[count];
+          }
+  }
+
+  NOTE: std::initializer_list perfers list constructor over non list constructor i.e if we try initiating a obj and it's ambigious if compiler will use constructor with parameter
+    that has std::initializer_list over the normal ones like IntArray(int a) then if it's initialize using () then latter is {} then the one with std::initializer_list willl run
+
+  NOTE: putting constructor with std::initializer_list is dangerous in a preexisting class as it complety changes a class's behaviour towards things given with {} arg
+
+-std::vector has similar thing:
+  std::vector<int> (5); -> 5 elements all 0
+  std::vector<int> {5} -> 1 element and that's 5
+
+-Class assignment using std::initializer_list
+  if u have list assignment constructor, take the following precaution and do at least one:
+      Provide an overloaded list assignment operator
+      Provide a proper deep-copying copy assignment operator
+      Delete the copy assignment operator
+
+    otherwise if someone does this:
+      IntArray mmp  = {1, 2, 3, 4}; then first with constructor {1, 2, 3, 4} will be truned into IntArray type
+                                    then that r value will be assigned to intArray and default assignment op will run, but only shallow copy if no deep copy is turned on
+                                    then once the line is out of scope the rvalue will go away and mmp now holds invalid stuff
+    BEST PRACTICE: IF YOU GIVE A std::initializer_list constructor then give a std::initializer_list assignment too!!

@@ -1,0 +1,74 @@
+24.8 — Hiding inherited functionality
+  -possible to change protected members in base class to public in derived using using-declarative functionality:
+    eg:
+      class Base{
+        int m_id {};
+      protected:
+        void printId(){std::cout << m_id;}
+      }
+
+      class Derived: public Base{
+      public:
+        using Base::printId; -> now it's public and can be accessed from outside
+      }
+
+      int main(){
+        Derived d {}
+        d.printId();
+      }
+  
+  -we can also hide a public behaviour (making it private) in similar manner:
+
+      class Base{
+        int m_id {};
+      public:
+        void printId(){std::cout << m_id;}
+      }
+
+      class Derived: public Base{
+      pricate:
+        using Base::printId; -> now it's public and can be accessed from outside
+      }
+
+      int main(){
+        Derived d {}
+        d.printId(); -> does not work thru derived class cuz it's been hidden (made private) (errors)
+      }
+
+      NOTE: there is no way to change access specifier for a single overloaded function, gotta do it for 'em all!
+
+      class Base{
+        int m_id {};
+      public:
+        void printId(){std::cout << m_id;}
+        void printId( int a){std::cout << m_id << a << std::endl;}
+      }
+
+      class Derived: public Base{
+      private:
+        using Base::printId; -> both printId() and printId(int a) are now private 
+      }
+
+      int main(){
+        Derived d {}
+        d.printId(); -> does not work thru derived class cuz it's been hidden (made private) (errors)
+      }
+  
+  -we can also simply delete it for derived class:
+     however it's still usable from the baseclass, so we can simply typecast the derived class into base class and make it usable!
+     OR WE CAN CALL BASE CLASS FUNCTION DIRECTLY TOO!! (SEE BELOW IMPP)
+      class Base{
+        int m_id {};
+      public:
+        void printId(){std::cout << m_id;}
+        void printId( int a){std::cout << m_id << a << std::endl;}
+      }
+
+      class Derived: public Base{
+        void printId() = delete; -> marked as deleted so no longer usable 
+      }
+      int main(){
+        Derived d {}
+        d.Base::printId();
+        static_cast<Base&>(d).printId();
+      }

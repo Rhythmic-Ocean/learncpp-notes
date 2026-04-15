@@ -1,0 +1,94 @@
+23.3 — Aggregation
+  -similar to composition in many ways but the link between the two classes is a lot weaker, but this is also a part of the "border composition" topic (see prev ch(22.2)).
+  -basically while in composition the whole actually owns the part and is responsible for managing it, in aggregate, the whole DOES NOT OWN the part, it's aware of it, but it just has
+    it, and it is NOT responsible for managing (creation/ destruction) of it.
+  -in composition the whole is usually born inside the class or copied (deep copy) or moved to the class, in aggregation, the whole usually just holds the reference of the part
+  -while composition is a part-of relation aggregation is has-a relation
+  -we have similar word agggregrate datatypes or sggregrate class, which is used to refer to simpe struct with no constructor and stuff on it
+
+  Formal requirements for composition:
+    The part (member) is part of the object (class)
+    The part (member) can (if desired) belong to more than one object (class) at a time
+    The part (member) does not have its existence managed by the object (class)
+    The part (member) does not know about the existence of the object (class)
+
+  eg:
+
+      class Teacher
+      {
+      private:
+        std::string m_name{};
+
+      public:
+        Teacher(std::string_view name)
+            : m_name{ name }
+        {
+        }
+
+        const std::string& getName() const { return m_name; }
+      };
+
+      class Department
+      {
+      private:
+        const Teacher& m_teacher; // This dept holds only one teacher for simplicity, but it could hold many teachers
+
+      public:
+        Department(const Teacher& teacher)
+          : m_teacher{ teacher }
+      {
+      }
+    };
+
+    int main()
+    {
+      // Create a teacher outside the scope of the Department
+      Teacher bob{ "Bob" }; // create a teacher
+
+      {
+        // Create a department and use the constructor parameter to pass
+        // the teacher to it.
+        Department department{ bob };
+
+      } // department goes out of scope here and is destroyed
+
+      // bob still exists here, but the department doesn't
+
+      std::cout << bob.getName() << " still exists!\n";
+
+      return 0;
+    }
+
+  -ABOUT std::reference_wrapper<>
+    in above example if we had to store a vector of teacher references that would not be possible cuz std::vector requires it type to be tangible and an object itself. We could use
+      pointers, but pointers cause problems as they can be nullptr unlike references which are never null, so we don't have to do null checks
+    to solve that, we have std::reference_wrapper<>. This is basically a reference that disguises itself as an object so std::vector<> will accept it. ALSO IT CAN BE RESEATED UNLIKE 
+      REGULAR REFERENCES!!!
+
+    eg:
+
+
+      int main()
+      {
+        std::string tom{ "Tom" };
+        std::string berta{ "Berta" };
+
+        std::vector<std::reference_wrapper<std::string>> names{ tom, berta }; // these strings are stored by reference, not value
+
+        std::string jim{ "Jim" };
+
+        names.emplace_back(jim);
+
+        for (auto name : names)
+        {
+          // Use the get() member function to get the referenced string.
+          name.get() += " Beam";
+        }
+
+        std::cout << jim << '\n'; // prints Jim Beam
+
+        return 0;
+      }
+
+
+  The relation unidirection, where whole know about the part but the other doesn't know it's a part of whole

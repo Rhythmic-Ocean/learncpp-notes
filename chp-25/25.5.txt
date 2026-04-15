@@ -1,0 +1,83 @@
+25.5 — Early binding and late binding
+  Early binding:
+    just means the binding occurs at compile time statically.The compiler knows the actual the
+      function being called and writes it down directly into assembly, eg: direct function calls
+      member or non-member fnc call.
+      eg:
+
+    struct Foo
+    {
+        void printValue(int value)
+        {
+            std::cout << value;
+        }
+    };
+
+    void printValue(int value)
+    {
+        std::cout << value;
+    }
+
+    int main()
+    {
+        printValue(5);   // direct function call to printValue(int)
+
+        Foo f{};
+        f.printValue(5); // direct function call to Foo::printValue(int)
+        return 0;
+    }
+
+  Late binding:
+    means compiler does not know the function being called, it's not baked into the machine code 
+      produces, like in function pointer. In function pointer calls happen indirectly as thru 
+      function pointer calling the function thru address of the machine code thru stack
+      eg: call thru function pointer, virtual fnc call etc...
+
+        int add(int x, int y)
+        {
+            return x + y;
+        }
+
+        int subtract(int x, int y)
+        {
+            return x - y;
+        }
+
+        int multiply(int x, int y)
+        {
+            return x * y;
+        }
+
+        int main()
+      {
+          int x{};
+          std::cout << "Enter a number: ";
+          std::cin >> x;
+
+          int y{};
+          std::cout << "Enter another number: ";
+          std::cin >> y;
+
+          int op{};
+          std::cout << "Enter an operation (0=add, 1=subtract, 2=multiply): ";
+          std::cin >> op;
+
+          using FcnPtr = int (*)(int, int); // alias ugly function pointer type
+          FcnPtr fcn { nullptr }; // create a function pointer object, set to nullptr initially
+
+          // Set fcn to point to the function the user chose
+          switch (op)
+      {
+          case 0: fcn = add; break;
+          case 1: fcn = subtract; break;
+          case 2: fcn = multiply; break;
+          default:
+              std::cout << "Invalid operator\n";
+              return 1;
+      }
+
+      // Call the function that fcn is pointing to with x and y as parameters
+      std::cout << "The answer is: " << fcn(x, y) << '\n';
+
+      return 0;
+  }

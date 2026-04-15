@@ -1,0 +1,10 @@
+23.5 — Dependencies
+  when one object invoke's another's functionality to accomplish something, weaker relationship than aasociate but if the former breaks, then the one that's dependent on it can break
+    as well
+      eg:
+        int main(){
+          std::cout << "I'm a guy!!\n";
+        }
+        here main() is dependent on std::cout object, so that's a dependency
+
+  in association there's some link between the associated object and the association object with "link" on member function, but there's no such thing for dependency

@@ -1,0 +1,151 @@
+24.9 — Multiple inheritance (recommended to avoid this unless alternative solution is more complex)
+
+  -inheriting from multiple class
+    eg:
+      class Person{
+        int m_age {};
+        std::string name {};
+      public:
+        Person(int age, std::string_view name): m_age {age}, m_name {name}{}
+        //sm stuff
+      };
+
+      class Employee{
+        std::string m_employer {}j
+      public:
+        Employee(std::string_view employer): m_employer {employer}{}
+      };
+
+      class Teacher: public Person, public{
+        int m_grade {};
+      public:   
+        Teacher(int age, std::string_view name, std::string_view employer, int grade) : Person {age, name}, Employee {employer}, m_grade {grade} {}
+      };
+
+  -mixins : small classes soloely to be inherited from in order to add property to certain thingies:
+    eg:
+      struct Point2D
+      {
+        int x{};
+        int y{};
+      };
+
+      class Box // mixin Box class
+      {
+      public:
+        void setTopLeft(Point2D point) { m_topLeft = point; }
+        void setBottomRight(Point2D point) { m_bottomRight = point; }
+      private:
+        Point2D m_topLeft{};
+        Point2D m_bottomRight{};
+      };
+
+      class Label // mixin Label class
+      {
+      public:
+        void setText(const std::string_view str) { m_text = str; }
+        void setFontSize(int fontSize) { m_fontSize = fontSize; }
+      private:
+        std::string m_text{};
+        int m_fontSize{};
+      };
+
+      class Tooltip // mixin Tooltip class
+      {
+      public:
+        void setText(const std::string_view str) { m_text = str; }
+      private:
+        std::string m_text{};
+      };
+
+      class Button : public Box, public Label, public Tooltip {}; // Button using three mixins
+
+      int main()
+      {
+        Button button{};
+        button.Box::setTopLeft({ 1, 1 });
+        button.Box::setBottomRight({ 10, 10 });
+        button.Label::setText("Submit");
+        button.Label::setFontSize(6);
+        button.Tooltip::setText("Submit the form to the server");
+      }
+
+-Problems with multiple inheritence:
+  kind bad if the classes u r inheriting from has from contains the functions with same name
+  eg:
+    
+
+      class USBDevice
+      {
+      private:
+          long m_id {};
+
+      public:
+          USBDevice(long id)
+              : m_id { id }
+          {
+          }
+
+          long getID() const { return m_id; }
+      };
+
+      class NetworkDevice
+      {
+      private:
+          long m_id {};
+
+      public:
+          NetworkDevice(long id)
+              : m_id { id }
+          {
+          }
+
+          long getID() const { return m_id; }
+      };
+
+      class WirelessAdapter: public USBDevice, public NetworkDevice
+      {
+      public:
+          WirelessAdapter(long usbId, long networkId)
+              : USBDevice { usbId }, NetworkDevice { networkId }
+          {
+          }
+    };
+
+    int main()
+  {
+      WirelessAdapter c54G { 5442, 181742 };
+      std::cout << c54G.getID(); // Which getID() do we call?
+
+      return 0;
+  }
+
+-One solution for this is to directly call thru base class like:
+  
+    int main()
+  {
+      WirelessAdapter c54G { 5442, 181742 };
+      std::cout << c54G.USBDevice::getID(); 
+
+      return 0;
+  }
+
+-But could get much more complex for more classes
+-The problem is worse for diamond structure like this, not sure why thoo:
+    class PoweredDevice
+    {
+    };
+
+    class Scanner: public PoweredDevice
+    {
+    };
+
+    class Printer: public PoweredDevice
+    {
+    };
+
+    class Copier: public Scanner, public Printer
+    {
+    };
+  
+  CONCLUSION: AVOID MULTIPLE INHERITENCE UNLESS ALT SOLUTION IS A LOTTT MORE COMPLEX!!

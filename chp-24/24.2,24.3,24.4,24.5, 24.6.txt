@@ -1,0 +1,108 @@
+24.2 Basic Inheritence
+
+  -It's a is-a relationship, the child inherits member functions (behaviours) and member variables 
+    (properties).
+  eg: // Employee class publicly inheriting from Person class
+    class Employee : public Person{
+      int m_hourlyWage {};
+    public:
+      void DisplayWage(){
+        std::out << m_name << "wage is" << m_hourlyWage << std::endl;
+      }
+    }
+
+24.3 Order of construction of derived class
+  -starts from the basest of class and then moves towards child class i.e the base class 
+    constructor runs first followed by next child, next child and so on..
+
+24.4 — Constructors and initialization of derived classes
+  class Base{
+  public:
+    int m_id{}
+    Base(int id = 0): m_id{id}{
+
+    }
+    int getId() const (return m_id;)
+  }
+
+  class Derived : public Base
+  {
+  public:
+    double m_cost {};
+    Derived(double cost=0.0):m_cost{cost}{
+    }
+    double getCost() const {return m_cost;}
+  }
+
+  in above class when we initiatlize the derived class, we can only have the default constructor
+    of Base class going on with default value, but we can put values in Base class when initiaiing
+    derived class too:
+
+  class Base{
+    int m_id{} -> can have this a private, no longer needed to be public
+  public:
+    Base(int id = 0): m_id{id}{
+
+    }
+    int getId() const (return m_id;)
+  }
+
+  class Derived : public Base
+  {
+  public:
+    double m_cost {};
+    Derived(int id = 0,double cost=0.0):Base{id}, m_cost{cost}{
+    }
+    double getCost() const {return m_cost;}
+  }
+
+  here Base{id} will initialize the base constructor with id 
+
+
+  It works imilairy in case of long inheritence chain too
+
+      class A
+      {
+      public:
+          A(int a)
+          {
+              std::cout << "A: " << a << '\n';
+          }
+      };
+
+      class B: public A
+      {
+      public:
+          B(int a, double b)
+          : A{ a }
+          {
+              std::cout << "B: " << b << '\n';
+          }
+      };
+
+      class C: public B
+      {
+      public:
+          C(int a, double b, char c)
+          : B{ a, b }
+          {
+              std::cout << "C: " << c << '\n';
+          }
+      };
+
+      int main()
+      {
+          C c{ 5, 4.3, 'R' };
+
+          return 0;
+      }
+
+24.5 — Inheritance and access specifiers
+  protected means the base class's stuff is availble to the class itself, it's friends and derived class
+  -different ways to intehrit:
+    public inheritence: whatever was public, private or protected in base class will be inherited as public private or protected
+    protected inheritence: whatever was pubic protected or private in base class will be inherited as protected protected and private
+    private inheritence: all member inherited from base class will act as private members
+  NOTE: in private inheritence, the members from base become private for others that might use the derived class, not the derived class itself, it can still use the public/ protected stuffs
+
+25.6 - Was just about how to add new stuff into intherited class (new member functions and stuffs)

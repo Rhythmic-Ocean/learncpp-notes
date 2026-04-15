@@ -1,0 +1,27 @@
+25.7 — Pure virtual functions, abstract base classes, and interface classes
+  -pure virtual functions/ abstract functions:
+    virtual function with no body(well it can have body, but outside class unless u using VS Cpp 
+      compiler):
+      eg:
+      class smCls{
+      public:
+        virtual int getValue() const = 0;
+        void ooo(){
+          std::cout << "ooo\n";
+        }
+      }
+    -=0 makes it virtual, but we can have a body outside
+      int smCls:getValue() const{
+        return 3;
+      }
+  -abstract base class:
+    any class with a abstract virtual function is abstract base class. It cannot be directly used 
+      to create objects
+    any class that inherits from it must implemet all virtual functions
+
+  -interface classes:
+    a class where all functions are pure virtual functions are called interface classes. 
+
+
+NOTE: for both abstract base class and interface class, it's best to make a vritual destructor (even default ones) in case we delete the base class pointer
+      

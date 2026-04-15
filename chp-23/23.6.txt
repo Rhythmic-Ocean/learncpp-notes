@@ -1,0 +1,5 @@
+Container class (have already implemented smthing similar multiple times so don't wanna do it again)
+chp like if wanna go see it again: https://www.learncpp.com/cpp-tutorial/container-classes/
+
+one thing:
+  std::copy_n(source, length, destination)

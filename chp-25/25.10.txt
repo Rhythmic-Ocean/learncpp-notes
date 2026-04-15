@@ -1,0 +1,143 @@
+25.10 — Dynamic casting
+  -to do casting during runtimes (only valid for reference/ pointers to objects with virtual functions). Useful for examples like these:
+  -used for downcasting (like from based to derived)
+  -dynamic casting uses RTTI (Run time type information) to determine type of the object b is pointing at, if you disable it (which u can), dynamic casting won't work
+  eg:
+        class Base
+        {
+        protected:
+          int m_value{};
+
+        public:
+          Base(int value)
+            : m_value{value}
+          {
+          }
+
+          virtual ~Base() = default;
+        };
+
+        class Derived : public Base
+        {
+        protected:
+          std::string m_name{};
+
+        public:
+          Derived(int value, std::string_view name)
+            : Base{value}, m_name{name}
+          {
+          }
+
+          const std::string& getName() const { return m_name; }
+        };
+
+        Base* getObject(bool returnDerived)
+        {
+          if (returnDerived)
+            return new Derived{1, "Apple"};
+          else
+            return new Base{2};
+        }
+
+        int main()
+        {
+          Base* b{ getObject(true) };
+
+          // how do we print the Derived object's name here, having only a Base pointer?
+
+          delete b;
+
+          return 0;
+        }
+    to do that, we use dynamic casting, we can use static casting but then there will be no runtime type checking, (specially if the value of returnDerived is to be determined with user input or something 
+      external during runtime), dynamic casting uses RTTI (Run time type information) to determine type of the object b is pointing at, and assign b to be nummptr if type doesn't match.
+    so we can check for nullptr to determine if the casting failed or not:
+    eg:
+      int main()
+      {
+        Base* b{ getObject(true) };
+
+        Derived* d{ dynamic_cast<Derived*>(b) }; // use dynamic cast to convert Base pointer into Derived pointer
+
+        if (d) // make sure d is non-null
+          std::cout << "The name of the Derived is: " << d->getName() << '\n';
+
+        delete b;
+
+        return 0;
+      }
+    -we can do it with static cast, but since no null time type check occurs, we can get hard to debug infos. One way to resolve for that would be:
+        enum class ClassID
+        {
+          base,
+          derived
+          // Others can be added here later
+        };
+
+        class Base
+        {
+        protected:
+          int m_value{};
+
+        public:
+          Base(int value)
+            : m_value{value}
+          {
+          }
+
+          virtual ~Base() = default;
+          virtual ClassID getClassID() const { return ClassID::base; }
+        };
+
+        class Derived : public Base
+        {
+        protected:
+          std::string m_name{};
+
+        public:
+          Derived(int value, std::string_view name)
+            : Base{value}, m_name{name}
+          {
+          }
+
+          const std::string& getName() const { return m_name; }
+          ClassID getClassID() const override { return ClassID::derived; }
+
+        };
+
+        Base* getObject(bool bReturnDerived)
+        {
+          if (bReturnDerived)
+            return new Derived{1, "Apple"};
+          else
+            return new Base{2};
+        }
+
+        int main()
+      {
+        Base* b{ getObject(true) };
+
+      if (b->getClassID() == ClassID::derived)
+      {
+        // We already proved b is pointing to a Derived object, so this should always succeed
+        Derived* d{ static_cast<Derived*>(b) };
+        std::cout << "The name of the Derived is: " << d->getName() << '\n';
+      }
+
+      delete b;
+
+      return 0;
+    }
+
+  -we can do dynamic_cast with help of references too:
+      int main()
+      {
+        Derived apple{1, "Apple"}; // create an apple
+        Base& b{ apple }; // set base reference to object
+        Derived& d{ dynamic_cast<Derived&>(b) }; // dynamic cast using a reference instead of a pointer
+
+        std::cout << "The name of the Derived is: " << d.getName() << '\n'; // we can access Derived::getName through d
+
+        return 0;
+      }
+  -but since references can't be null, dynamic cast will throw us std::bad_cast error

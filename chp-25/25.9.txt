@@ -1,0 +1,38 @@
+25.9 — Object slicing
+  -basically what happens when you inititlize a base class with it's derived class (invoking copy constructor with base cass)
+  eg;
+    int main(){
+      Derived d1 {};
+      Base b {d1}; -> virtual table for this object will be reinitialized and point to base's virtual table. 
+                      so any call to virtual functions will be rediercted to the base functions
+    }
+
+  -can be tricker with function call, leading to unintential obj slicing:
+      void printName(const Base base) // note: base passed by value, not reference
+      {
+          std::cout << "I am a " << base.getName() << '\n';
+      }
+      int main()
+      {
+          Derived d{ 5 };
+          printName(d); // oops, didn't realize this was pass by value on the calling end
+
+          return 0;
+      }
+    -avoidable by making function parameter by reference insted of value
+
+  -another tricker thing might be slicing vectors:
+    int main(){
+      std::vector <Base> v{};
+      v.push_back(Derived{5}); -> another obj slicing here
+    }
+
+    in this case since we can't do Base& (template arg), so we either tho Base * (pointers but then nullptr becomes an option) or we do std::reference_wrapper<Base>()
+
+  -Frankenobject:
+    object that are mix of multiple objects, eg:
+    int main(){
+      Derived d {};
+      Base& base {d};
+      base = d1; -> will have base of d1 and derived of d (if they are derived from same class no problem, but can be a lot of problem in multiple inheritence)
+    }

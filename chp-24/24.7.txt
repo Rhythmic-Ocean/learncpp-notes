@@ -1,0 +1,154 @@
+24.7 — Calling inherited functions and overriding behavior
+  -calling base class function:
+    if we don't have any simialry named function in derived class, we cna directly call public functions of base class from derived class instances:
+
+          class Base
+          {
+          public:
+              Base() { }
+
+              void identify() const { std::cout << "Base::identify()\n"; }
+          };
+
+          class Derived: public Base
+          {
+          public:
+              Derived() { }
+          };
+
+          int main()
+          {
+              Base base {};
+              base.identify();
+
+              Derived derived {};
+              derived.identify();
+
+              return 0;
+          }
+
+  -redefining functions behaviour:
+    or we can redefine the function with same signature in derived class:
+
+      class Base
+      {
+      public:
+          Base() { }
+
+          void identify() const { std::cout << "Base::identify()\n"; }
+      };
+
+      class Derived: public Base
+      {
+      public:
+          Derived() { }
+
+          void identify() const { std::cout << "Derived::identify()\n"; }
+      };
+
+      int main()
+      {
+          Base base {};
+          base.identify();
+
+          Derived derived {};
+          derived.identify();
+
+          return 0;
+      }
+    note, u can redefined the access specifier too i.e a behaviour defined as private can be redefined as public or anything else
+  -adding to existing functionality:
+    basically redefining the behaviour(same as above) but first calling onto the base version of the function
+
+      class Base
+      {
+      public:
+          Base() { }
+
+          void identify() const { std::cout << "Base::identify()\n"; }
+      };
+
+      class Derived: public Base
+      {
+      public:
+          Derived() { }
+
+          void identify() const { 
+            Base::identify(); -> first invoking base class's behaviour
+            std::cout << "Derived::identify()\n"; 
+          }
+      };
+
+      int main()
+      {
+          Base base {};
+          base.identify();
+
+          Derived derived {};
+          derived.identify();
+
+          return 0;
+      }
+
+  doing the same thing as above for friend functions is a bit more tricky as we can't access friend function with scope resolution(::) of the base class
+  but we can instead call the friend function by static_casting our derived class as base class, eg:
+      friend std::ostream& operator<< (std::ostream& out, const Derived& d)
+      {
+        out << "In Derived\n";
+        // static_cast Derived to a Base object, so we call the right version of operator<<
+        out << static_cast<const Base&>(d);
+        return out;
+      }
+
+  overload resolutions:
+    if we have print(string) in derived and print(int) in base, and we call print(int) thru derived instance then we will get compile time error. Cuz once the compiler sees print() defined in derived class
+      it stops looking at base class, and just thrws error if it can't find appropriate stuff
+
+    There are a few solutions for it:
+      -crating print(int) inside derived class too and just calling print(int) form base class inside:
+          class Base
+          {
+          public:
+              void print(int)    { std::cout << "Base::print(int)\n"; }
+              void print(double) { std::cout << "Base::print(double)\n"; }
+          };
+
+          class Derived: public Base
+          {
+          public:
+              void print(int n) { Base::print(n); } // works but not great, as we have to define
+              void print(double) { std::cout << "Derived::print(double)"; }
+          };
+
+          int main()
+          {
+              Derived d{};
+              d.print(5); // calls Derived::print(int), which calls Base::print(int)
+
+              return 0;
+          }
+      
+      -Better option is to have a using declariont on derived to have all base function of the name visible withing it's namespace:
+
+          class Base
+          {
+          public:
+              void print(int)    { std::cout << "Base::print(int)\n"; }
+              void print(double) { std::cout << "Base::print(double)\n"; }
+          };
+
+          class Derived: public Base
+          {
+          public:
+              using Base::print;
+              void print(double) { std::cout << "Derived::print(double)"; }
+          };
+
+          int main()
+          {
+              Derived d{};
+              d.print(5); // calls Derived::print(int), which calls Base::print(int)
+
+              return 0;
+          }
+      

@@ -1,0 +1,24 @@
+23.2 — Composition
+  -two classes has composition relation if one of the classes object is a member of other class. eg:
+    class Creature
+    {
+    private:
+      std::string m_name;
+      Point2D m_location;
+    }
+    here, Point2D is a part of Creature class, they have part-of relationship and hence composition
+
+
+  NOTE: composition could mean two thing, the broder compostion or a compostion (or obj composition) that part of the broder composition along side aggregrate. Although when ppl say
+    compostion it means the broder one, but we will use the narrower one here 
+
+  the class that's the part of should be awaer about the existence of the class that's taking control of one of it's object
+  the object's lifetime should be managed by the class that's encompassing it
+
+  More formal relationship criteris:
+    The part (member) is part of the object (class)
+    The part (member) can only belong to one object (class) at a time
+    The part (member) has its existence managed by the object (class)
+    The part (member) does not know about the existence of the object (class)
+
+  The relation unidirection, where whole know about the part but the other doesn't know it's a part of whole
