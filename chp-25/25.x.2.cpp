@@ -65,12 +65,11 @@ int getLargestRadius(std::vector<std::unique_ptr<Shape>> &v) {
 }
 
 int main() {
-  std::vector<std::unique_ptr<Shape>> v{
-      std::make_unique<Circle>(Point{1, 2}, 7),
-      std::make_unique<Triangle>(Point{1, 2}, Point{3, 4}, Point{5, 6}),
-      std::make_unique<Circle>(Point{7, 8}, 3)
-
-  };
+  std::vector<std::unique_ptr<Shape>> v;
+  v.push_back(std::move(std::make_unique<Circle>(Point{1, 2}, 7)));
+  v.emplace_back(
+      std::make_unique<Triangle>(Point{1, 2}, Point{3, 4}, Point{5, 6}));
+  v.emplace_back(std::make_unique<Circle>(Point{7, 8}, 3));
   // print each shape in vector v on its own line here
   for (auto &shape : v) {
     std::cout << *shape.get() << '\n';

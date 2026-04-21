@@ -1,0 +1,47 @@
+26.3 — Function template specialization
+NOTE: FULL TEMPLATE SPECIALIZATION ARE NO IMPLICITLY INLINE!
+      For member function template specialization we need class template specialization
+  having template functions specialize (or using a non template version)
+  1. USING NON TEMPLATE TYPE
+  eg, if we use non template with same name, it's valid and compiler will prefer it over template 
+    for correct types:
+
+      template <typename T>
+      void print(const T& t)
+      {
+          std::cout << t << '\n';
+      }
+
+      void print(double d)
+      {
+          std::cout << std::scientific << d << '\n';
+      }
+
+      int main()
+      {
+          print(5);
+          print(6.7);
+
+          return 0;
+      }
+    here, for print(6.7) the compiler will prefer print(double d) over template print
+
+
+  2. SPECIALIZING TEMPLATE
+  eg. We can specialize template using similar function signature, only replacing the T with
+    whatever we wanna specialize with (including reference and const quantifier)
+
+  eg:
+  template <typename T>
+  void print(const T& t){
+      std::cout << t << '\n';
+  }
+
+  template <>
+  void print<double>(const double& d){
+    std::cout << std::scientific << d << '\n';
+  }
+
+  int main(){
+    print (66.8);
+  }

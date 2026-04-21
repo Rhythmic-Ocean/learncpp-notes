@@ -1,0 +1,75 @@
+26.1 — Template classes
+  -classes can have tmeplate just like functions:
+    eg:
+      
+      template <typename T>
+      class Array{
+
+      private:
+        int m_lenght {};
+        T* m_data{};
+
+      public:
+        Array(int length){
+          asset(length > 0);
+          m_data = new T[length]{};
+          m_length = length;
+        }
+
+        //deleting copy constructor
+        Array(const Array&) = delete;
+
+        //deleting copy assignment
+        Array& operator=(const Array&) = delete;
+
+        ~Array(){
+          delete[] m_data;
+        }
+
+        void erase(){
+          delete[] m_data;
+          m_data = nullptr;
+          m_length = 0;
+        }
+        
+        //gonna define externally
+        T& opeartor[](int index);
+
+        int getLength() const {return m_length;}
+      };
+
+      template<typename T>
+      T& operator[](int index){
+        assert(index >= 0 && index < m_length)
+        return m_data[index];
+      }
+
+      int main(){
+        const int length {12};
+        Array <int> intArray {length};
+        Array<double> doubleArray {length};
+      }
+
+  -having template class and defining it's member functions in a seperate .cpp file can cause 
+    problem cuz compiler will not be able to parse that seperate .cpp file during compile time
+    with the main file to create the required class for given type in main
+  -solutions include just putting the tempate member function in .h file, #include the .cpp file (
+    not recommended) or adding a third file with all the instantiated class we might need and 
+    just includeing it
+    eg:
+      // Ensure the full Array template definition can be seen
+      #include "Array.h"
+      #include "Array.cpp" // we're breaking best practices here, but only in this one place
+
+      // #include other .h and .cpp template definitions you need here
+
+      template class Array<int>; // Explicitly instantiate template Array<int>
+      template class Array<double>; // Explicitly instantiate template Array<double>
+
+      // instantiate other templates here
+
+    the template class Array<int> and template class Array <double> causes the compiler to generate the code
+      the template class with int and double types
+
+
+        

@@ -1,0 +1,29 @@
+26.6 — Partial template specialization for pointers
+  -for cases where we want our  classes work differently depending on weather thetemplate type is pointer type or non pointer type, like:
+      not possible for functions cuz c++ does not yet support partial specialization for functions, but we can do for member functions thry classes
+      eg:
+        template<typename T>
+        class smClass<T>{
+          T m_smthing {};
+        public:
+          smClass(T smthing): m_smthing{smthing}{}
+          void print(){
+              std::cout << m_smthing;
+          }
+        }
+
+        template<typename T>
+        class smClass<T*>
+        {
+          T* m_smaddr{};
+        public
+          smClass(T* smthing): m_smthing{smthing}{}
+          void print(){
+              std::cout << *m_smthing;
+          }
+        }
+
+  -there could be some disasters waiting to happen, for example, since our class takes in pointer for constructor, the object pointer's referencing could go out of scope while the class's object still
+    has it leaving us with dnagling pointers. We can use std::unique_ptr and have the object own the reference so the obj in ref never goes out of reference
+  -we can also prevent it altogether by just doing static_assert
+
