@@ -1,0 +1,29 @@
+27.4 — Uncaught exceptions and catch-all handlers
+  -we can use catch block with elipses as catch all handler eg:
+  eg:
+    int main(){
+      try{
+      }
+      catch(...){
+      }
+    }
+    however catched exceptions do not appear during debugging, when an exception go unhandled, 
+      the program calls std::termination() and the core is dumped for debugging, so when debuggin
+      using catch-all is not recommended
+
+    -we can have something like this going on:
+      eg:
+        try
+          {
+              runGame(session);
+          }
+      #ifndef NDEBUG // if we're in release node
+          catch(...) // compile in the catch-all handler
+          {
+              std::cerr << "Abnormal termination\n";
+          }
+      #else // in debug mode, compile in a catch that will never be hit (for syntactic reasons)
+          catch(DummyException)
+          {
+          }
+      #endif

@@ -1,0 +1,140 @@
+NOTE: constructor should have strong exception gurentee  to gurentee that if a function is 
+      inturrupted by an exception no memory is leaked and nothing else is altered
+27.9 — Exception specifications and noexcept
+  -specifying if a function can throw exception or not, we used to have thing to specify which type
+    of exception this function can throw but it's deprecated now
+  -for now ALL functions are classified as either non throwing or potentially throwing
+  -just like return value diff cannot have u overload 2 diff functions, exception specification diff
+    won't be enought too
+  -if a noexcept function throws an exception, then the even the function is wrapped around try
+   catch then std::termination() is called, which might or might not do stack unwinding
+   eg:
+    class Dommed
+    {
+    public:
+      ~Doomed()
+      {
+        std::cout << "Dommed destructed\n";
+      }
+    };
+    
+    void thrower(){
+      Doomed dom{};
+      throw -1;
+    }
+
+    void nt() noexcept{
+      Doom dom();
+      throw -1;
+    }
+
+    void test(){
+      try{
+        thrower();
+      }
+      catch(...){
+        std::cout "caught smthing\n";
+      }
+      try{
+        nt();
+      }
+      catch(...){
+        std::cout "caught smthing\n";
+      }
+    }
+
+    in this example when thr thrower throws -1, since it doens't have noexcept, dom is properly 
+      destructed cuz there's a catch in test()
+    when nt() throws, it has noexcept do dom will NOT be destructed, nothing will be caught in test
+      and the program is directly terminated!!
+
+  -noexcept() for template and perfomance:
+    if possible function should be noexcept as it gives more performance, we can have our template
+      function optionally noexcept depending on weather the template type does or does not throw
+      exception
+      eg:
+        eg:
+        template<typename T>
+        void smthing(T&a, T&b) noexcept(noexcept(T(std::move(a)))){
+
+        }
+
+      -not this function will be noexcept or not dependingon weather T(T&& a) [move constructor]
+        of this T type is of noexcept type
+
+      NOTE: noexcept(bool) placed right after function signature only accepts true or false, true
+        means it will be noexcept, else it will NOT be noexcept
+      NOTE: the noexcept inside is expression, returns true or false depending weather the function
+        described inside is of noexcept type or not
+        more examples:
+          void foo() {throw -1;}
+          void boo() {};
+          void goo() noexcept {};
+          struct S{};
+
+          constexpr bool b1{ noexcept(5 + 3) }; // true; ints are non-throwing
+          constexpr bool b2{ noexcept(foo()) }; // false; foo() throws an exception
+          constexpr bool b3{ noexcept(boo()) }; // false; boo() is implicitly noexcept(false)
+          constexpr bool b4{ noexcept(goo()) }; // true; goo() is explicitly noexcept(true)
+          constexpr bool b5{ noexcept(S{}) };   // true; a struct's default constructor is 
+                                                    noexcept by default
+      NOTE: noexcept(bool) -> specifier (usually for fnc template)
+            noexcept(smfunc() call) -> OPERATOR that gives true or false
+
+      NOTE: the operator kind needs to have function CALL inside NOT SIGNATURE,
+        int foo(int a , int b) {return a + b;}
+
+        constexpr bool b1 {noexcept(foo(0, 0))}; -> will be flase cuz non mem fun are non noexcept
+                                                    by DEFAULT
+
+  -functions that are potentially throwing/ non throwing by default:
+
+    -Destructors -> ALWAYS IMPLICITLY NON THROWING 
+    -these functions are non throwing if they are default or implicithy defined, but upon using
+      function calls to function that are potentially throwing they will be treated as potentially
+      throwing as well
+        -Constructors: move, default, move
+        -Assignment: copy, move
+        -Comparaision operator(form C++20)
+
+    -these are potentially throwing if non imlicitly defined or defaulted:
+      -Normal function
+      user defined constructors
+      user defined operators
+      
+
+  -Exception safety gurentees:
+    No gurentee:no gurentee what will happen if some exception is throws
+    Basic gurenteed: if an exception is thrown memory leak will not happen and the obj is still
+      usable but the prog might be modified
+    Strong gurentee: no side effect if it fails, no memory leak no program modification
+    No throw/ no fail: noexcept stuff, either NEVER failing or if fail then no exception thrown
+      either ignoring it or throws some error code instead of exception itself
+
+    The following should provide no fail gurentee:
+      move constructors and move assignment (move semantics, covered in chapter 22)
+      swap functions
+      clear/erase/reset functions on containers
+      operations on std::unique_ptr (also covered in chapter 22)
+      functions that higher-level no-fail functions need to call
+
+  -ALWAYS MARK THE FOLLOWING AS NOEXCEPT:
+    Move constructors
+    Move assignment operators
+    Swap functions
+
+  -The following can be noexcept too if suitable:
+    Functions for which you want to express a no-throw or no-fail guarantee (e.g. to document
+      that they can be safely called from destructors or other noexcept functions)
+    Copy constructors and copy assignment operators that are no-throw (to take advantage of 
+      optimizations).
+    Destructors. Destructors are implicitly noexcept so long as all members have noexcept 
+      destructors
+
+
+  -Older dynamic exception speficier (being specific which error our fnc can throw)
+        int doSomething() throw(); // does not throw exceptions
+        int doSomething() throw(std::out_of_range, int*); // may throw either std::out_of_range 
+                                                            or a pointer to an integer
+        int doSomething() throw(...); // may throw anything
+

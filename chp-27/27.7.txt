@@ -1,0 +1,57 @@
+NOTE: referring to members of a failed object (excpetion occuring in constructor) IS 
+      undefined! Using function try block to clean up after is BAD. Use RAII based
+      member values for safety
+27.7 — Function try blocks
+  -throw catch work in most cases but what if we want to catch exception from our parent
+    class constructor?:
+    eg:
+      class B: public A{
+      private:
+        int m_x;
+      public:
+        B(int x) : A{x}{}
+      }
+
+    here how to catch exception from A{x}? 
+    we use function try block:
+    class B: public A{
+    public:
+      B(int x) try: A{x}
+      {
+      }
+      catch(...)
+      {
+        std::cerr << "exception caught!\n";
+        throw; -> rethrowing the same exception
+      }
+    }
+
+  -There are a few exception to this:
+    function try blokc w Constructor: exception MUST be rethrown, implicitly rethrowing
+      happens
+    f t b w Destructor : exception can be resolved, but implicit rethrow
+    f t b w non value returing fnc: can be resolved, and will be implicity resolved
+    f t b w value ret function : can be resolved, implicit thow is undefined
+
+  NOTE: best practice is to expicitly throw, either the same exception or something 
+        else
+
+    -it can also be used to catch base class's exception:
+    class B : public A
+    {
+    public:
+      B(int x) try : A{x} // note addition of try keyword here
+      {
+        if (x <= 0) // moved this from A to B
+          throw 1; // and this too
+      }
+      catch (...)
+      {
+                    std::cerr << "Exception caught\n";
+
+                    // If an exception isn't explicitly thrown here,
+                    // the current exception will be implicitly rethrown
+      }
+    };
+
+

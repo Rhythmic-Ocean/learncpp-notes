@@ -1,0 +1,182 @@
+NOTE: unless the exception is of fundamental type, always catch by reference, BUT throw by value
+      to prevent dangling pointer/ reference and also object slicing for catch
+27.5 — Exceptions, classes, and inheritance
+  -very useful for operator overloading:
+      int& IntArray::operator[](const int index)
+      {
+          assert (index >= 0 && index < getLength());
+          return m_data[index];
+      }
+
+  -we can have it for constructors too when they fail, but if we thru exception from inside the 
+    constructors the destructor will not run which might cause memory leak
+  -but we can take advantage of the fact that class member's are destructed if they follow
+    appropriate RAII principle even if the constructors fail, 
+    eg: here we have expcetion thrown inside A's constructor, but even then since Member has 
+      appropriate destructor, it gets properly destroyed with minimum memory leaks
+        class Member
+        {
+        public:
+          Member()
+          {
+            std::cerr << "Member allocated some resources\n";
+          }
+
+          ~Member()
+          {
+            std::cerr << "Member cleaned up\n";
+          }
+        };
+
+        class A
+        {
+        private:
+          int m_x {};
+          Member m_member;
+
+        public:
+          A(int x) : m_x{x}
+          {
+            if (x <= 0)
+              throw 1;
+          }
+
+          ~A()
+          {
+            std::cerr << "~A\n"; // should not be called
+          }
+        };
+
+
+        int main()
+        {
+          try
+          {
+            A a{0};
+          }
+          catch (int)
+          {
+            std::cerr << "Oops\n";
+          }
+
+          return 0;
+        }
+
+-Exception class:
+  instead of just throwing basic data types, it's often better to throw custom or in-built 
+    exception class 
+
+  -here's an exception class to be used that can be thrown as excpetion:
+      class ArrayException
+      {
+      private:
+        std::string m_error;
+
+      public:
+        ArrayException(std::string_view error)
+          : m_error{ error }
+        {
+        }
+
+        const std::string& getError() const { return m_error; }
+      };
+
+  -we also have a inherited exception class, unlike the case of numerical type conversion, catch
+    allows class type conversion eg: (here the program exits with caught Base, i.e Base type 
+    accepts it's derived exception thrown it's way too)
+      class Base
+      {
+      public:
+          Base() {}
+      };
+
+      class Derived: public Base
+      {
+      public:
+          Derived() {}
+      };
+
+      int main()
+      {
+          try
+          {
+              throw Derived();
+          }
+          catch (const Base& base)
+          {
+              std::cerr << "caught Base";
+          }
+          catch (const Derived& derived)
+          {
+              std::cerr << "caught Derived";
+          }
+
+          return 0;
+      }
+  -std::exception:
+    all exceptions thrown by std library are of type this,
+    eg:
+      #include <cstddef> // for std::size_t
+      #include <exception> // for std::exception
+      #include <iostream>
+      #include <limits>
+      #include <string> // for this example
+
+      int main()
+      {
+          try
+          {
+              // Your code using standard library goes here
+              // We'll trigger one of these exceptions intentionally for the sake of the example
+              std::string s;
+              s.resize(std::numeric_limits<std::size_t>::max()); // will trigger a std::length_error or allocation exception
+          }
+          // This handler will catch std::exception and all the derived exceptions too
+          catch (const std::exception& exception)
+          {
+              std::cerr << "Standard exception: " << exception.what() << '\n';
+          }
+
+          return 0;
+      }
+
+    std::exception has a virtual member function named what() that returns a C type string 
+      description 
+
+  -std::runtime_error
+    which can also be used
+
+  -we can also derive our own stuff from std::exception with one thing to keep in mind that is
+    the what() should have noexcept qualifier cuz that's what's there in std::exception defn
+
+  class ArrayExcpetion: public std::exception{
+  private:
+    std::string m_error {};
+  public:
+    ArrayExcpetion(std::string_view error): m_error{error}{}
+    const char* what() const noexcept override {return m_error.c_str()}
+  }
+
+  -can also override std::runtime_error:
+
+      class ArrayException : public std::runtime_error
+      {
+      public:
+        // std::runtime_error takes either a null-terminated const char* or a const std::string&.
+        // We will follow their lead and take a const std::string&
+        ArrayException(const std::string& error)
+          : std::runtime_error{ error } // std::runtime_error will handle the string
+        {
+        }
+              // no need to override what() since we can just use std::runtime_error::what()
+      };
+
+  Lifetime of an exception:
+    the object that's been thrown should be copyable cuz this object carries info that should be
+      availble even after local variables die as the stack unwinds, so if it's a pointer or 
+      reference to some other local vars, then this might result in a danglging object being
+      returned insted.
+
+    -ALso the exception object's copy constructor should not be deleted and be copyable, cuz 
+      when exception occur the object is copied to a sperate space and saved so that it's 
+      passed to wherever the catch happen

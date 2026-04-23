@@ -1,0 +1,43 @@
+27.8 — Exception dangers and downsides
+  -gotta clean after yourself eg:
+      try
+      {
+          openFile(filename);
+          writeFile(filename, data);
+      }
+      catch (const FileException& exception)
+      {
+          std::cerr << "Failed to write to file: " << exception.what() << '\n';
+      }
+
+      // Make sure file is closed
+      closeFile(filename);
+
+  -another form might be thru memory allocation:
+      Person* john{ nullptr };
+      try
+      {
+          john = new Person("John", 18, PERSON_MALE);
+          processPerson(john);
+      }
+      catch (const PersonException& exception)
+      {
+          std::cerr << "Failed to process person: " << exception.what() << '\n';
+      }
+      delete john;
+
+  -or prefer using std::unique_ptr which cleans up after itself
+
+NOTE: NEVER THROW Exception WITH DESTRUCTORS, cuz destructor can usually trigger during exception
+  handling, so if another exception occur when one is being handled, the program simply does
+  std::terminate()
+
+NOTE: exception handling comes with some performance concerns, so use it when necessary but some
+  modern compiler architecture support zero cost for non error throwing try block but incur
+  a lot more performance if exception is thrown
+
+When to use exception:
+    The error being handled is likely to occur only infrequently.
+    The error is serious and execution could not continue otherwise.
+    The error cannot be handled at the place where it occurs.
+    There isn’t a good alternative way to return an error code back to the caller.

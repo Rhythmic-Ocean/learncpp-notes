@@ -1,0 +1,50 @@
+27.2 — Basic exception handling
+  -it's just try catch and throw
+  -one thing to keep in mind is catch does not do implicit type conversion for things throw throws
+  eg:
+    try{
+        throw -1;
+    }
+    catch(double d){
+      std::cout << d;
+    }
+  catch will not catch -1 and exception will unwind to be run time error
+
+  -another thing to note is that once an exception is thrown only catch can catch it, everything 
+    else that comes in between's ignore
+      eg:
+        int main()
+        {
+            try
+            {
+                throw 4.5; // throw exception of type double
+                std::cout << "This never prints\n";
+            }
+            catch (double x) // handle exception of type double
+            {
+                std::cerr << "We caught a double of value: " << x << '\n';
+            }
+
+            return 0;
+        }
+  -good realistic example:
+      int main()
+      {
+          std::cout << "Enter a number: ";
+          double x {};
+          std::cin >> x;
+
+          try // Look for exceptions that occur within try block and route to attached catch block(s)
+          {
+              // If the user entered a negative number, this is an error condition
+              if (x < 0.0)
+                  throw "Can not take sqrt of negative number"; // throw exception of type const char*
+
+              // Otherwise, print the answer
+              std::cout << "The sqrt of " << x << " is " << std::sqrt(x) << '\n';
+          }
+          catch (const char* exception) // catch exceptions of type const char*
+          {
+              std::cerr << "Error: " << exception << '\n';
+          }
+      }

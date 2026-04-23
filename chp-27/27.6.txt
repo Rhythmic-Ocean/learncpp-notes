@@ -1,0 +1,63 @@
+27.6 — Rethrowing exceptions
+  -some case might occur where we wanna catch the excpetion, partially handle it and throw again,
+    here this is wrong approach:
+      int getIntValueFromDatabase(Database* d, std::string table, std::string key)
+      {
+          assert(d);
+
+          try
+          {
+              return d->getIntValue(table, key); // throws Derived exception on failure
+          }
+          catch (Base& exception)
+          {
+              // Write an error to some global logfile
+              g_log.logError("getIntValueFromDatabase failed");
+
+              throw exception; // Danger: this throws a Base object, not a Derived object
+          }
+      }
+    
+    causes object SLICING!!
+
+  -instead just do throw inside the catch, it will throw the same exception it just caught:
+    eg:
+        class Base
+        {
+        public:
+            Base() {}
+            virtual void print() { std::cout << "Base"; }
+        };
+
+        class Derived: public Base
+        {
+        public:
+            Derived() {}
+            void print() override { std::cout << "Derived"; }
+        };
+
+        int main()
+        {
+            try
+            {
+                try
+                {
+                    throw Derived{};
+                }
+                catch (Base& b)
+                {
+                    std::cout << "Caught Base b, which is actually a ";
+                    b.print();
+                    std::cout << '\n';
+                    throw; // note: We're now rethrowing the object here
+                }
+            }
+            catch (Base& b)
+            {
+                std::cout << "Caught Base b, which is actually a ";
+                b.print();
+                std::cout << '\n';
+            }
+
+            return 0;
+        }
